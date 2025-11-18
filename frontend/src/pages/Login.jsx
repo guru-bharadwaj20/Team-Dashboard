@@ -1,0 +1,113 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { isValidEmail, saveAuthToken, saveCurrentUser } from '../utils/helpers.js';
+import { SUCCESS_MESSAGES } from '../utils/constants.js';
+import './Login.css';
+
+const Login = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Validation
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setError('Please enter a valid email');
+      return;
+    }
+
+    if (!formData.password) {
+      setError('Password is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Mock authentication - replace with actual API call
+      // const response = await auth.login(formData.email, formData.password);
+      
+      // For demo purposes, create a dummy token
+      const dummyToken = `jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const user = {
+        id: 1,
+        email: formData.email,
+        name: formData.email.split('@')[0],
+      };
+
+      saveAuthToken(dummyToken);
+      saveCurrentUser(user);
+      
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-container">
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <h1>Login</h1>
+        <p className="auth-form-subtitle">Welcome back! Sign in to your account</p>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <div className="form-group">
+          <label htmlFor="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button type="submit" className="auth-button" disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+
+        <div className="auth-footer">
+          Don't have an account? <Link to="/register">Sign up</Link>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default Login;
