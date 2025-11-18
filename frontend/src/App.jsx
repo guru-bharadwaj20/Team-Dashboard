@@ -1,0 +1,81 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar/Navbar.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import LandingPage from './pages/LandingPage.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import TeamBoard from './pages/TeamBoard.jsx';
+import ProposalDetails from './pages/ProposalDetails.jsx';
+import PublicBoard from './pages/PublicBoard.jsx';
+import Profile from './pages/Profile.jsx';
+import Notifications from './pages/Notifications.jsx';
+import ErrorPage from './pages/ErrorPage.jsx';
+import './App.css';
+
+function App() {
+  return (
+    <Router>
+      <div className="app">
+        <Navbar />
+        <div className="app-content">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/board/:shareId" element={<PublicBoard />} />
+
+            {/* Private Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/team/:id"
+              element={
+                <ProtectedRoute>
+                  <TeamBoard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proposal/:id"
+              element={
+                <ProtectedRoute>
+                  <ProposalDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Error and Catch-all Routes */}
+            <Route path="/error" element={<ErrorPage />} />
+            <Route path="*" element={<Navigate to="/error" replace />} />
+          </Routes>
+        </div>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
