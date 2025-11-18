@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, removeAuthToken, removeCurrentUser } from '../utils/helpers.js';
+import { isAuthenticated, removeAuthToken, removeCurrentUser } from '../../utils/helpers.js';
 import './Navbar.css';
 
 const Navbar = () => {

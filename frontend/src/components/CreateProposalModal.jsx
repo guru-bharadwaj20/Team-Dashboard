@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import '../Modal.css';
+import './Modal.css';
 
 const CreateProposalModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
