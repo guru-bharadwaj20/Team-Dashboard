@@ -1,29 +1,43 @@
 import api from './axios.js';
+import { saveAuthToken, saveCurrentUser, removeAuthToken, removeCurrentUser } from '../utils/helpers.js';
 
 export const authApi = {
   register: async (name, email, password) => {
-    try {
-      const res = await api.post('/auth/register', { name, email, password });
-      // Handle both response.data and direct response
-      const data = res?.data || res;
-      // Don't save to localStorage here - let AuthContext handle it
-      return data;
-    } catch (error) {
-      console.error('Register error:', error);
-      throw error;
+    const res = await api.post('/auth/register', { name, email, password });
+    if (res?.token) {
+      saveAuthToken(res.token);
+      saveCurrentUser(res.user);
     }
+    return res;
   },
   login: async (email, password) => {
-    try {
-      const res = await api.post('/auth/login', { email, password });
-      // Handle both response.data and direct response
-      const data = res?.data || res;
-      // Don't save to localStorage here - let AuthContext handle it
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+    const res = await api.post('/auth/login', { email, password });
+    if (res?.token) {
+      saveAuthToken(res.token);
+      saveCurrentUser(res.user);
     }
+    return res;
+  },
+  logout: () => {
+    removeAuthToken();
+    removeCurrentUser();
+  },
+  updateProfile: async (name, email) => {
+    const res = await api.put('/auth/profile', { name, email });
+    if (res?.user) {
+      saveCurrentUser(res.user);
+    }
+    return res;
+  },
+  changePassword: async (currentPassword, newPassword) => {
+    const res = await api.put('/auth/password', { currentPassword, newPassword });
+    return res;
+  },
+  deleteAccount: async () => {
+    const res = await api.delete('/auth/account');
+    removeAuthToken();
+    removeCurrentUser();
+    return res;
   },
 };
 

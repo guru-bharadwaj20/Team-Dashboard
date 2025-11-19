@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import CreateProposalModal from '../components/CreateProposalModal.jsx';
 import ProposalCard from '../components/ProposalCard/ProposalCard.jsx';
 import Loader from '../components/Loader.jsx';
-import { MOCK_TEAMS, MOCK_PROPOSALS } from '../utils/constants.js';
 import { teamApi } from '../api/teamApi.js';
 import { proposalApi } from '../api/proposalApi.js';
+import { useSocket } from '../context/SocketContext.jsx';
+import { SOCKET_EVENTS } from '../utils/socketEvents.js';
 import './TeamBoard.css';
 
 const TeamBoard = () => {
@@ -15,6 +16,7 @@ const TeamBoard = () => {
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { socket, connected, joinTeam, leaveTeam } = useSocket();
 
   useEffect(() => {
     const fetchTeamAndProposals = async () => {
@@ -38,37 +40,6 @@ const TeamBoard = () => {
         const teamProposals = data.proposals || [];
         // Map proposals to UI-friendly shape
         const mapped = teamProposals.map((p) => {
-          // count votes per option
-          const counts = p.options.map((opt) => ({ text: opt.text, count: 0 }));
-          for (const v of p.votes) {
-            const idx = counts.findIndex((c) => c.text && (v.optionId.toString() === p.options[counts.indexOf(c)]?._id?.toString()));
-            // fallback: try matching by optionId
-            const byIdIdx = p.options.findIndex((o) => o._id.toString() === v.optionId.toString());
-            const useIdx = byIdIdx >= 0 ? byIdIdx : idx >= 0 ? idx : 0;
-            counts[useIdx].count++;
-          }
-
-          // Map counts into yes/no/abstain if possible
-          const votesObj = { yes: 0, no: 0, abstain: 0 };
-          if (p.options.length >= 3) {
-            // attempt to map by text
-            for (let i = 0; i < Math.min(3, p.options.length); i++) {
-              const txt = (p.options[i].text || '').toLowerCase();
-              if (txt.includes('yes')) votesObj.yes += counts[i].count;
-              else if (txt.includes('no')) votesObj.no += counts[i].count;
-              else if (txt.includes('abstain')) votesObj.abstain += counts[i].count;
-              else {
-                // fallback: distribute into yes/no/abstain by index
-                if (i === 0) votesObj.yes += counts[i].count;
-                if (i === 1) votesObj.no += counts[i].count;
-                if (i === 2) votesObj.abstain += counts[i].count;
-              }
-            }
-          } else {
-            // fewer than 3 options: lump into yes
-            votesObj.yes = counts.reduce((s, c) => s + c.count, 0);
-          }
-
           return {
             id: p._id || p.id,
             teamId: p.teamId,
@@ -76,14 +47,12 @@ const TeamBoard = () => {
             description: p.description,
             status: p.status || 'open',
             createdAt: p.createdAt,
-            votes: votesObj,
             raw: p,
           };
         });
 
-        setProposals(mapped.length ? mapped : MOCK_PROPOSALS.filter((p) => p.teamId === parseInt(teamId)));
+        setProposals(mapped);
       } catch (err) {
-        console.error(err);
         navigate('/error');
       } finally {
         setLoading(false);
@@ -92,6 +61,56 @@ const TeamBoard = () => {
 
     fetchTeamAndProposals();
   }, [teamId, navigate]);
+
+  // Join team room and listen for real-time updates
+  useEffect(() => {
+    if (!socket || !connected || !teamId) return;
+
+    // Join the team room
+    joinTeam(teamId);
+
+    const handleProposalCreated = (data) => {
+      if (data.teamId.toString() === teamId) {
+        const p = data.proposal;
+        const mapped = {
+          id: p._id || p.id,
+          teamId: p.teamId,
+          title: p.title,
+          description: p.description,
+          status: p.status || 'open',
+          createdAt: p.createdAt,
+          raw: p,
+        };
+        setProposals((prev) => [mapped, ...prev]);
+      }
+    };
+
+    const handleProposalDeleted = (data) => {
+      if (data.teamId.toString() === teamId) {
+        setProposals((prev) => prev.filter((p) => p.id !== data.proposalId));
+      }
+    };
+
+    const handleMemberJoined = (data) => {
+      if (data.teamId === teamId) {
+        setTeam((prev) => ({
+          ...prev,
+          memberCount: data.memberCount,
+        }));
+      }
+    };
+
+    socket.on(SOCKET_EVENTS.PROPOSAL_CREATED, handleProposalCreated);
+    socket.on(SOCKET_EVENTS.PROPOSAL_DELETED, handleProposalDeleted);
+    socket.on(SOCKET_EVENTS.TEAM_MEMBER_JOINED, handleMemberJoined);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.PROPOSAL_CREATED, handleProposalCreated);
+      socket.off(SOCKET_EVENTS.PROPOSAL_DELETED, handleProposalDeleted);
+      socket.off(SOCKET_EVENTS.TEAM_MEMBER_JOINED, handleMemberJoined);
+      leaveTeam(teamId);
+    };
+  }, [socket, connected, teamId, joinTeam, leaveTeam]);
 
   const handleCreateProposal = async (formData) => {
     try {
@@ -118,7 +137,6 @@ const TeamBoard = () => {
         description: created.description,
         status: created.status || 'open',
         createdAt: created.createdAt,
-        votes: { yes: 0, no: 0, abstain: 0 },
         raw: created,
       };
       setProposals([...proposals, mapped]);
@@ -164,7 +182,7 @@ const TeamBoard = () => {
         <div className="team-board-empty">
           <p className="team-board-empty-text">No proposals yet</p>
           <p style={{ color: '#6b7280' }}>
-            Create your first proposal to start voting
+            Create your first proposal to start discussions
           </p>
         </div>
       ) : (

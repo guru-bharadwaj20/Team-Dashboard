@@ -1,56 +1,26 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { getCurrentUser } from '../utils/helpers.js';
-import { user as userAPI, teams, proposals, votes, comments } from '../utils/api.js';
+import { authApi } from '../api/authApi.js';
+import { useNavigate } from 'react-router-dom';
 import './Profile.css';
 
 const Profile = () => {
-  const navigate = useNavigate();
   const currentUser = getCurrentUser();
+  const navigate = useNavigate();
   const [user] = useState(currentUser);
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [stats, setStats] = useState({
-    teamsJoined: 0,
-    votesCast: 0,
-    proposalsCreated: 0,
-    comments: 0,
-  });
+  
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
   });
+
   const [passwordData, setPasswordData] = useState({
-    oldPassword: '',
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  // Fetch real stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const teamsList = await teams.getAll();
-        const userTeams = (teamsList?.data || teamsList || []).filter(
-          t => Array.isArray(t.members) && t.members.some(m => m._id === user._id)
-        );
-        
-        setStats(prev => ({
-          ...prev,
-          teamsJoined: userTeams.length,
-        }));
-      } catch (err) {
-        console.error('Failed to fetch stats:', err);
-      }
-    };
-
-    if (user?._id) {
-      fetchStats();
-    }
-  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,20 +40,28 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      setLoading(true);
-      await userAPI.updateProfile(formData);
-      alert('Profile updated successfully');
+      const res = await authApi.updateProfile(formData.name, formData.email);
+      
+      alert(res.message || 'Profile updated successfully');
+      
+      // Update local user state
+      setFormData({
+        name: res.user.name,
+        email: res.user.email,
+      });
+      
       setEditMode(false);
-    } catch (err) {
-      alert(err?.message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
+      
+      // Refresh page to update UI with new user data
+      window.location.reload();
+    } catch (error) {
+      alert('Failed to update profile: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  const handleChangePassword = async () => {
+  const handlePasswordUpdate = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Passwords do not match');
+      alert('New passwords do not match');
       return;
     }
 
@@ -93,35 +71,39 @@ const Profile = () => {
     }
 
     try {
-      setLoading(true);
-      await userAPI.changePassword(passwordData);
-      alert('Password changed successfully');
+      const res = await authApi.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      
+      alert(res.message || 'Password changed successfully');
       setChangePasswordMode(false);
-      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err) {
-      alert(err?.message || 'Failed to change password');
-    } finally {
-      setLoading(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      alert('Failed to change password: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirm !== currentUser?.email) {
-      alert('Email does not match. Please enter your email to confirm.');
-      return;
-    }
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action cannot be undone and will delete all your teams and proposals.'
+    );
+
+    if (!confirmed) return;
+
+    const doubleConfirm = window.confirm(
+      'This is your last chance. Are you absolutely sure you want to permanently delete your account?'
+    );
+
+    if (!doubleConfirm) return;
 
     try {
-      setLoading(true);
-      await userAPI.deleteAccount();
+      await authApi.deleteAccount();
+      
       alert('Account deleted successfully');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
       navigate('/');
-    } catch (err) {
-      alert(err?.message || 'Failed to delete account');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      alert('Failed to delete account: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -139,43 +121,28 @@ const Profile = () => {
         <h1 className="profile-title">My Profile</h1>
       </div>
 
-      {!editMode && !changePasswordMode && !deleteMode ? (
+      {/* Profile Information */}
+      {!editMode && !changePasswordMode && (
         <>
           <div className="profile-info">
             <div className="profile-info-item">
               <div className="profile-info-label">Name</div>
               <div className="profile-info-value">{user.name}</div>
             </div>
+          </div>
+
+          <div className="profile-info">
             <div className="profile-info-item">
               <div className="profile-info-label">Email</div>
               <div className="profile-info-value">{user.email}</div>
             </div>
+          </div>
+
+          <div className="profile-info">
             <div className="profile-info-item">
               <div className="profile-info-label">Member Since</div>
               <div className="profile-info-value">
                 {new Date().toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-
-          <div className="profile-section">
-            <h2 className="profile-section-title">Statistics</h2>
-            <div className="profile-stats">
-              <div className="stat-card">
-                <div className="stat-value">{stats.teamsJoined}</div>
-                <div className="stat-label">Teams Joined</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.votesCast}</div>
-                <div className="stat-label">Votes Cast</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.proposalsCreated}</div>
-                <div className="stat-label">Proposals Created</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{stats.comments}</div>
-                <div className="stat-label">Comments</div>
               </div>
             </div>
           </div>
@@ -195,13 +162,16 @@ const Profile = () => {
             </button>
             <button 
               className="profile-button danger"
-              onClick={() => setDeleteMode(true)}
+              onClick={handleDeleteAccount}
             >
               Delete Account
             </button>
           </div>
         </>
-      ) : editMode ? (
+      )}
+
+      {/* Edit Profile Mode */}
+      {editMode && (
         <div className="profile-section">
           <h2 className="profile-section-title">Edit Profile</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -227,9 +197,8 @@ const Profile = () => {
               <button
                 className="profile-button primary"
                 onClick={handleSave}
-                disabled={loading}
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                Save Changes
               </button>
               <button
                 className="profile-button secondary"
@@ -246,7 +215,10 @@ const Profile = () => {
             </div>
           </div>
         </div>
-      ) : changePasswordMode ? (
+      )}
+
+      {/* Change Password Mode */}
+      {changePasswordMode && (
         <div className="profile-section">
           <h2 className="profile-section-title">Change Password</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -254,10 +226,10 @@ const Profile = () => {
               <label>Current Password</label>
               <input
                 type="password"
-                name="oldPassword"
-                placeholder="Enter your current password"
-                value={passwordData.oldPassword}
+                name="currentPassword"
+                value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
+                placeholder="Enter current password"
               />
             </div>
             <div className="form-group">
@@ -265,34 +237,33 @@ const Profile = () => {
               <input
                 type="password"
                 name="newPassword"
-                placeholder="Enter new password (min 6 characters)"
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
+                placeholder="Enter new password (min 6 characters)"
               />
             </div>
             <div className="form-group">
-              <label>Confirm Password</label>
+              <label>Confirm New Password</label>
               <input
                 type="password"
                 name="confirmPassword"
-                placeholder="Confirm new password"
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
+                placeholder="Confirm new password"
               />
             </div>
             <div className="profile-actions">
               <button
                 className="profile-button primary"
-                onClick={handleChangePassword}
-                disabled={loading}
+                onClick={handlePasswordUpdate}
               >
-                {loading ? 'Updating...' : 'Update Password'}
+                Update Password
               </button>
               <button
                 className="profile-button secondary"
                 onClick={() => {
                   setChangePasswordMode(false);
-                  setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 }}
               >
                 Cancel
@@ -300,45 +271,7 @@ const Profile = () => {
             </div>
           </div>
         </div>
-      ) : deleteMode ? (
-        <div className="profile-section">
-          <h2 className="profile-section-title">Delete Account</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
-              <p style={{ color: '#991b1b', fontWeight: '600', margin: '0 0 0.5rem 0' }}>⚠️ Warning: This action is permanent</p>
-              <p style={{ color: '#7f1d1d', margin: 0 }}>Deleting your account will remove all your data including teams, proposals, and voting history. This cannot be undone.</p>
-            </div>
-            <div className="form-group">
-              <label>Type your email to confirm deletion</label>
-              <input
-                type="email"
-                placeholder={currentUser?.email}
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-              />
-              <small style={{ color: '#6b7280' }}>Type: {currentUser?.email}</small>
-            </div>
-            <div className="profile-actions">
-              <button
-                className="profile-button danger"
-                onClick={handleDeleteAccount}
-                disabled={loading || deleteConfirm !== currentUser?.email}
-              >
-                {loading ? 'Deleting...' : 'Delete Account'}
-              </button>
-              <button
-                className="profile-button secondary"
-                onClick={() => {
-                  setDeleteMode(false);
-                  setDeleteConfirm('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 };
