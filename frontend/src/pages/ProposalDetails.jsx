@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader.jsx';
-import { MOCK_PROPOSALS, MOCK_COMMENTS, VOTE_OPTIONS } from '../utils/constants.js';
-import { calculateVotePercentages } from '../utils/helpers.js';
+import { proposalApi } from '../api/proposalApi.js';
+import { useSocket } from '../context/SocketContext.jsx';
+import { SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { getCurrentUser } from '../utils/helpers.js';
 import './ProposalDetails.css';
 
 const ProposalDetails = () => {
@@ -11,33 +13,45 @@ const ProposalDetails = () => {
   const [proposal, setProposal] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userVote, setUserVote] = useState(null);
   const [commentText, setCommentText] = useState('');
-  const [votedMessage, setVotedMessage] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState(new Set());
+  const { socket, connected, joinProposal, leaveProposal } = useSocket();
+  const currentUser = getCurrentUser();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Simulate API calls
-        // const proposalResponse = await proposals.getById(proposalId);
-        // const commentsResponse = await comments.getByProposal(proposalId);
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const foundProposal = MOCK_PROPOSALS.find(
-          (p) => p.id === parseInt(proposalId)
-        );
-        if (!foundProposal) {
+        // Real API calls
+        const res = await proposalApi.getById(proposalId);
+        const data = res?.data ?? res;
+        const p = data;
+        if (!p) {
           navigate('/error');
           return;
         }
 
-        setProposal(foundProposal);
+        setProposal({
+          id: p._id || p.id,
+          title: p.title,
+          description: p.description,
+          status: p.status || 'open',
+          createdAt: p.createdAt,
+          deadline: p.deadline,
+          options: p.options || [],
+          raw: p,
+        });
 
-        const proposalComments = MOCK_COMMENTS.filter(
-          (c) => c.proposalId === parseInt(proposalId)
-        );
-        setComments(proposalComments);
+        // Comments
+        const commentsRes = await proposalApi.getComments(proposalId);
+        const commentsData = commentsRes?.data ?? commentsRes;
+        // map backend comments to UI shape
+        const mappedComments = (commentsData || []).map((c) => ({
+          id: c._id || `${c.user}-${c.createdAt}`,
+          author: c.user?.name || c.user?.email || 'Anonymous',
+          text: c.text,
+          createdAt: c.createdAt,
+        }));
+        setComments(mappedComments);
       } catch {
         navigate('/error');
       } finally {
@@ -48,60 +62,83 @@ const ProposalDetails = () => {
     fetchData();
   }, [proposalId, navigate]);
 
-  const handleVote = async (option) => {
-    try {
-      // Mock API call
-      // await votes.vote(proposalId, option);
+  // Join proposal room and listen for real-time updates
+  useEffect(() => {
+    if (!socket || !connected || !proposalId) return;
 
-      setUserVote(option);
-      setVotedMessage(`Vote recorded: ${option.charAt(0).toUpperCase() + option.slice(1)}`);
+    // Join the proposal room
+    joinProposal(proposalId);
 
-      // Update vote count
-      const updatedProposal = {
-        ...proposal,
-        votes: {
-          ...proposal.votes,
-          [option]: proposal.votes[option] + 1,
-        },
-      };
-      setProposal(updatedProposal);
+    const handleCommentAdded = (data) => {
+      if (data.proposalId === proposalId) {
+        const newComment = {
+          id: data.comment._id,
+          author: data.comment.user?.name || 'Anonymous',
+          text: data.comment.text,
+          createdAt: data.comment.createdAt,
+        };
+        setComments((prev) => [...prev, newComment]);
+      }
+    };
 
-      setTimeout(() => setVotedMessage(''), 3000);
-    } catch {
-      alert('Failed to record vote');
-    }
-  };
+    socket.on(SOCKET_EVENTS.COMMENT_ADDED, handleCommentAdded);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.COMMENT_ADDED, handleCommentAdded);
+      leaveProposal(proposalId);
+    };
+  }, [socket, connected, proposalId, joinProposal, leaveProposal]);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
 
     try {
-      // Mock API call
-      // const response = await comments.create(proposalId, commentText);
-
-      const newComment = {
-        id: Math.max(...comments.map((c) => c.id), 0) + 1,
-        proposalId: parseInt(proposalId),
-        author: 'You',
-        text: commentText,
-        createdAt: new Date().toISOString(),
-      };
-
-      setComments([...comments, newComment]);
+      await proposalApi.addComment(proposalId, commentText);
+      // refetch comments
+      const res = await proposalApi.getComments(proposalId);
+      const data = res?.data ?? res;
+      const mappedComments = (data || []).map((c) => ({
+        id: c._id || `${c.user}-${c.createdAt}`,
+        author: c.user?.name || c.user?.email || 'Anonymous',
+        text: c.text,
+        createdAt: c.createdAt,
+      }));
+      setComments(mappedComments);
       setCommentText('');
-    } catch {
-      alert('Failed to add comment');
+    } catch (err) {
+      console.error('Comment error:', err);
+      alert(`Failed to add comment: ${err.response?.data?.message || err.message || 'Unknown error'}`);
     }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this proposal?')) {
+      try {
+        await proposalApi.delete(proposalId);
+        navigate(-1);
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert(`Failed to delete proposal: ${err.response?.data?.message || err.message || 'Unknown error'}`);
+      }
+    }
+  };
+
+  const handleOptionToggle = (optionId) => {
+    setSelectedOptions((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(optionId)) {
+        newSet.delete(optionId);
+      } else {
+        newSet.add(optionId);
+      }
+      return newSet;
+    });
   };
 
   if (loading) return <Loader />;
 
   if (!proposal) return null;
-
-  const percentages = calculateVotePercentages(proposal.votes);
-  const total =
-    proposal.votes.yes + proposal.votes.no + proposal.votes.abstain;
 
   return (
     <div className="proposal-details-container">
@@ -125,9 +162,28 @@ const ProposalDetails = () => {
       <div className="proposal-details-card">
         <div className="proposal-details-header">
           <h1 className="proposal-details-title">{proposal.title}</h1>
-          <span className={`proposal-details-status ${proposal.status}`}>
-            {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
-          </span>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span className={`proposal-details-status ${proposal.status}`}>
+              {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+            </span>
+            {currentUser && proposal.raw?.creator === currentUser.id && (
+              <button
+                onClick={handleDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                }}
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="proposal-details-description">{proposal.description}</p>
@@ -147,111 +203,44 @@ const ProposalDetails = () => {
                 : 'No deadline'}
             </div>
           </div>
-          <div className="proposal-details-meta-item">
-            <div className="proposal-details-meta-label">Total Votes</div>
-            <div className="proposal-details-meta-value">{total}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Voting Section */}
-      <div className="voting-section">
-        <h2 className="voting-section-title">Cast Your Vote</h2>
-
-        <div className="voting-options">
-          <button
-            className={`vote-button yes ${userVote === VOTE_OPTIONS.YES ? 'selected' : ''}`}
-            onClick={() => handleVote(VOTE_OPTIONS.YES)}
-            disabled={!proposal.status === 'open'}
-          >
-            ✓ Yes
-          </button>
-          <button
-            className={`vote-button no ${userVote === VOTE_OPTIONS.NO ? 'selected' : ''}`}
-            onClick={() => handleVote(VOTE_OPTIONS.NO)}
-            disabled={!proposal.status === 'open'}
-          >
-            ✕ No
-          </button>
-          <button
-            className={`vote-button abstain ${userVote === VOTE_OPTIONS.ABSTAIN ? 'selected' : ''}`}
-            onClick={() => handleVote(VOTE_OPTIONS.ABSTAIN)}
-            disabled={!proposal.status === 'open'}
-          >
-            - Abstain
-          </button>
         </div>
 
-        {votedMessage && (
-          <div className="voting-message success">{votedMessage}</div>
-        )}
-
-        {proposal.status !== 'open' && (
-          <div className="voting-message info">
-            Voting is closed for this proposal
+        {/* Display options if any */}
+        {proposal.options && proposal.options.length > 0 && (
+          <div className="proposal-options">
+            <h3>Options:</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+              {proposal.options.map((option, idx) => (
+                <label 
+                  key={option._id || idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem',
+                    backgroundColor: selectedOptions.has(option._id) ? '#dbeafe' : '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedOptions.has(option._id)}
+                    onChange={() => handleOptionToggle(option._id)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <span style={{ fontSize: '1rem', color: '#111827' }}>{option.text}</span>
+                </label>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Results Section */}
-      <div className="results-section">
-        <h2 className="results-section-title">Voting Results</h2>
-
-        <div className="results-grid">
-          <div className="result-item">
-            <div className="result-label">Yes</div>
-            <div className="result-bar-container">
-              <div
-                className="result-bar yes"
-                style={{
-                  width: total > 0 ? `${(proposal.votes.yes / total) * 100}%` : '0%',
-                }}
-              >
-                {percentages.yes > 5 && `${percentages.yes}%`}
-              </div>
-            </div>
-            <div className="result-percentage">
-              <span>{proposal.votes.yes} votes</span>
-              <span>{percentages.yes}%</span>
-            </div>
-          </div>
-
-          <div className="result-item">
-            <div className="result-label">No</div>
-            <div className="result-bar-container">
-              <div
-                className="result-bar no"
-                style={{
-                  width: total > 0 ? `${(proposal.votes.no / total) * 100}%` : '0%',
-                }}
-              >
-                {percentages.no > 5 && `${percentages.no}%`}
-              </div>
-            </div>
-            <div className="result-percentage">
-              <span>{proposal.votes.no} votes</span>
-              <span>{percentages.no}%</span>
-            </div>
-          </div>
-
-          <div className="result-item">
-            <div className="result-label">Abstain</div>
-            <div className="result-bar-container">
-              <div
-                className="result-bar abstain"
-                style={{
-                  width: total > 0 ? `${(proposal.votes.abstain / total) * 100}%` : '0%',
-                }}
-              >
-                {percentages.abstain > 5 && `${percentages.abstain}%`}
-              </div>
-            </div>
-            <div className="result-percentage">
-              <span>{proposal.votes.abstain} votes</span>
-              <span>{percentages.abstain}%</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Comments Section */}
