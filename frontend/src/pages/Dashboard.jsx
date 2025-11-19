@@ -4,6 +4,9 @@ import TeamCard from '../components/TeamCard/TeamCard.jsx';
 import Loader from '../components/Loader.jsx';
 import { MOCK_TEAMS } from '../utils/constants.js';
 import { teamApi } from '../api/teamApi.js';
+import { useSocket } from '../context/SocketContext.jsx';
+import { SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { getCurrentUser } from '../utils/helpers.js';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -11,6 +14,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
+  const { socket, connected } = useSocket();
+  const currentUser = getCurrentUser();
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -25,13 +30,12 @@ const Dashboard = () => {
           description: t.description,
           memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
           createdAt: t.createdAt || new Date().toISOString(),
+          members: t.members || [],
+          creator: t.creator?._id || t.creator,
         }));
-        // Don't use placeholder teams - only show real teams
         setTeams(mapped);
       } catch (err) {
         setError('Failed to load teams');
-        console.error(err);
-        // Start with empty teams, not placeholders
         setTeams([]);
       } finally {
         setLoading(false);
@@ -40,6 +44,34 @@ const Dashboard = () => {
 
     fetchTeams();
   }, []);
+
+  // Listen for real-time team updates
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    const handleTeamCreated = (data) => {
+      const newTeam = {
+        id: data.team._id || data.team.id,
+        name: data.team.name,
+        description: data.team.description,
+        memberCount: Array.isArray(data.team.members) ? data.team.members.length : 1,
+        createdAt: data.team.createdAt || new Date().toISOString(),
+      };
+      setTeams((prev) => [newTeam, ...prev]);
+    };
+
+    const handleTeamDeleted = (data) => {
+      setTeams((prev) => prev.filter((t) => t.id !== data.teamId));
+    };
+
+    socket.on(SOCKET_EVENTS.TEAM_CREATED, handleTeamCreated);
+    socket.on(SOCKET_EVENTS.TEAM_DELETED, handleTeamDeleted);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.TEAM_CREATED, handleTeamCreated);
+      socket.off(SOCKET_EVENTS.TEAM_DELETED, handleTeamDeleted);
+    };
+  }, [socket, connected]);
 
   const handleCreateTeam = async (formData) => {
     try {
@@ -60,16 +92,45 @@ const Dashboard = () => {
   };
 
   const handleDeleteTeam = async (teamId) => {
-    if (window.confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this team?')) {
       try {
+        // Call backend to delete
         await teamApi.delete(teamId);
+        // The socket event will update the UI for all users
         setTeams(teams.filter((t) => t.id !== teamId));
-        setError('');
-      } catch (err) {
-        setError(`Failed to delete team: ${err.message || 'Unknown error'}`);
-        console.error('Delete team error:', err);
+      } catch {
+        setError('Failed to delete team');
       }
     }
+  };
+
+  const handleJoinTeam = async (teamId) => {
+    try {
+      await teamApi.join(teamId);
+      // Refresh teams to get updated member count
+      const res = await teamApi.getAll();
+      const data = res?.data ?? res;
+      const mapped = (data || []).map((t) => ({
+        id: t._id || t.id,
+        name: t.name,
+        description: t.description,
+        memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
+        createdAt: t.createdAt || new Date().toISOString(),
+        members: t.members || [],
+        creator: t.creator?._id || t.creator,
+      }));
+      setTeams(mapped);
+    } catch (err) {
+      setError('Failed to join team');
+    }
+  };
+
+  const isUserMember = (team) => {
+    if (!currentUser) return false;
+    return team.members.some(m => {
+      const memberId = typeof m === 'object' ? m._id : m;
+      return memberId === currentUser.id;
+    });
   };
 
   if (loading) return <Loader />;
@@ -106,7 +167,9 @@ const Dashboard = () => {
             <TeamCard
               key={team.id}
               team={team}
-              onDelete={handleDeleteTeam}
+              onDelete={team.creator === currentUser?.id ? handleDeleteTeam : null}
+              onJoin={handleJoinTeam}
+              isMember={isUserMember(team)}
             />
           ))}
         </div>

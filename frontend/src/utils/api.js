@@ -85,8 +85,6 @@ export const publicBoard = {
 export const user = {
   getProfile: () => apiClient.get('/user/profile'),
   updateProfile: (data) => apiClient.put('/user/profile', data),
-  changePassword: (data) => apiClient.post('/user/change-password', data),
-  deleteAccount: () => apiClient.delete('/user/account'),
   getNotifications: () => apiClient.get('/user/notifications'),
 };
 

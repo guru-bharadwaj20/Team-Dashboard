@@ -15,21 +15,6 @@ const ProposalCard = ({ proposal }) => {
 
       <p className="proposal-card-description">{proposal.description}</p>
 
-      <div className="proposal-card-stats">
-        <div className="proposal-card-stat">
-          <div className="proposal-card-stat-value">{proposal.votes.yes}</div>
-          <div className="proposal-card-stat-label">Yes</div>
-        </div>
-        <div className="proposal-card-stat">
-          <div className="proposal-card-stat-value">{proposal.votes.no}</div>
-          <div className="proposal-card-stat-label">No</div>
-        </div>
-        <div className="proposal-card-stat">
-          <div className="proposal-card-stat-value">{proposal.votes.abstain}</div>
-          <div className="proposal-card-stat-label">Abstain</div>
-        </div>
-      </div>
-
       <div className="proposal-card-footer">
         <span className="proposal-card-date">
           {new Date(proposal.createdAt).toLocaleDateString()}

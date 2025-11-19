@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import './TeamCard.css';
 
-const TeamCard = ({ team, onDelete }) => {
+const TeamCard = ({ team, onDelete, onJoin, isMember }) => {
   return (
     <div className="team-card">
       <div className="team-card-header">
@@ -20,9 +20,18 @@ const TeamCard = ({ team, onDelete }) => {
       </div>
 
       <div className="team-card-actions">
-        <Link to={`/team/${team.id}`} className="team-card-button">
-          View Proposals
-        </Link>
+        {isMember ? (
+          <Link to={`/team/${team.id}`} className="team-card-button">
+            View Proposals
+          </Link>
+        ) : (
+          <button
+            className="team-card-button"
+            onClick={() => onJoin(team.id)}
+          >
+            Join Team
+          </button>
+        )}
         {onDelete && (
           <button
             className="team-card-button secondary"
