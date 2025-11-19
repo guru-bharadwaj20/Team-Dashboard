@@ -37,6 +37,10 @@ export const SocketProvider = ({ children }) => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
+      pingInterval: 25000,
+      pingTimeout: 60000,
+      forceNew: false,
+      multiplex: true,
     });
 
     socketInstance.on('connect', () => {
@@ -47,6 +51,12 @@ export const SocketProvider = ({ children }) => {
     socketInstance.on('disconnect', (reason) => {
       console.log('✗ Socket disconnected:', reason);
       setConnected(false);
+      
+      // Automatic reconnection will handle most cases
+      if (reason === 'io server disconnect') {
+        // Server forced disconnect, attempt reconnect
+        socketInstance.connect();
+      }
     });
 
     socketInstance.on('connect_error', (error) => {
@@ -79,11 +89,9 @@ export const SocketProvider = ({ children }) => {
     socketRef.current = socketInstance;
 
     return () => {
-      console.log('⚠️  Socket cleanup called - disconnecting');
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
+      // Don't disconnect on unmount - only cleanup on full unload
+      // This prevents unnecessary disconnections during navigation
+      console.log('⚠️  Component unmounting (socket persisting)');
     };
   }, []);
 
