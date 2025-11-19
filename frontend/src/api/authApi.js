@@ -3,20 +3,34 @@ import { saveAuthToken, saveCurrentUser, removeAuthToken, removeCurrentUser } fr
 
 export const authApi = {
   register: async (name, email, password) => {
-    const res = await api.post('/auth/register', { name, email, password });
-    if (res?.token) {
-      saveAuthToken(res.token);
-      saveCurrentUser(res.user);
+    try {
+      const res = await api.post('/auth/register', { name, email, password });
+      // Handle both response.data and direct response
+      const data = res?.data || res;
+      if (data?.token) {
+        saveAuthToken(data.token);
+        saveCurrentUser(data.user);
+      }
+      return data;
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
     }
-    return res;
   },
   login: async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    if (res?.token) {
-      saveAuthToken(res.token);
-      saveCurrentUser(res.user);
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      // Handle both response.data and direct response
+      const data = res?.data || res;
+      if (data?.token) {
+        saveAuthToken(data.token);
+        saveCurrentUser(data.user);
+      }
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-    return res;
   },
   logout: () => {
     removeAuthToken();

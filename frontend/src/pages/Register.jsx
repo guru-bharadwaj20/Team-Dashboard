@@ -64,8 +64,19 @@ const Register = () => {
       setSuccess('Account created successfully! Redirecting to dashboard...');
       setTimeout(() => navigate('/dashboard'), 1200);
     } catch (err) {
-      const msg = err?.message || (err?.response?.data?.message) || 'Registration failed. Please try again.';
-      setError(msg);
+      console.error('Registration error:', err);
+      // Handle different error types
+      if (err?.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err?.response?.status === 400) {
+        setError('Invalid input. Please check your information.');
+      } else if (err?.response?.status === 409) {
+        setError('Email already in use. Please use a different email.');
+      } else if (err?.message === 'Network Error' || !err?.response) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(err?.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -49,11 +49,22 @@ const Login = () => {
     setLoading(true);
     try {
       // Call backend login via AuthContext helper
-      const data = await login(formData.email, formData.password);
+      await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      const msg = err?.message || (err?.response?.data?.message) || 'Login failed. Please try again.';
-      setError(msg);
+      console.error('Login error:', err);
+      // Handle different error types
+      if (err?.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err?.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err?.response?.status === 400) {
+        setError('Invalid input. Please check your information.');
+      } else if (err?.message === 'Network Error' || !err?.response) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(err?.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
