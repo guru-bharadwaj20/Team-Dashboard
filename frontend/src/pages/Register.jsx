@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { isValidEmail, isValidPassword, saveAuthToken, saveCurrentUser } from '../utils/helpers.js';
+import { isValidEmail, isValidPassword } from '../utils/helpers.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import './Register.css';
 
 const Register = () => {
@@ -14,6 +15,7 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,26 +60,12 @@ const Register = () => {
 
     setLoading(true);
     try {
-      // Mock registration - replace with actual API call
-      // const response = await auth.register(formData.email, formData.password, formData.name);
-
-      // For demo purposes, create a dummy token
-      const dummyToken = `jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const user = {
-        id: Math.floor(Math.random() * 10000),
-        email: formData.email,
-        name: formData.name,
-      };
-
-      saveAuthToken(dummyToken);
-      saveCurrentUser(user);
-
+      const data = await register(formData.name, formData.email, formData.password);
       setSuccess('Account created successfully! Redirecting to dashboard...');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
+      setTimeout(() => navigate('/dashboard'), 1200);
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      const msg = err?.message || (err?.response?.data?.message) || 'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

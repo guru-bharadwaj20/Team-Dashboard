@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { isValidEmail, saveAuthToken, saveCurrentUser } from '../utils/helpers.js';
+import { isValidEmail } from '../utils/helpers.js';
+import { authApi } from '../api/authApi.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { SUCCESS_MESSAGES } from '../utils/constants.js';
 import './Login.css';
 
@@ -21,6 +23,8 @@ const Login = () => {
     }));
     setError('');
   };
+
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,23 +48,12 @@ const Login = () => {
 
     setLoading(true);
     try {
-      // Mock authentication - replace with actual API call
-      // const response = await auth.login(formData.email, formData.password);
-      
-      // For demo purposes, create a dummy token
-      const dummyToken = `jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const user = {
-        id: 1,
-        email: formData.email,
-        name: formData.email.split('@')[0],
-      };
-
-      saveAuthToken(dummyToken);
-      saveCurrentUser(user);
-      
+      // Call backend login via AuthContext helper
+      const data = await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
+      const msg = err?.message || (err?.response?.data?.message) || 'Login failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

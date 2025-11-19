@@ -3,6 +3,7 @@ import CreateTeamModal from '../components/CreateTeamModal.jsx';
 import TeamCard from '../components/TeamCard/TeamCard.jsx';
 import Loader from '../components/Loader.jsx';
 import { MOCK_TEAMS } from '../utils/constants.js';
+import { teamApi } from '../api/teamApi.js';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -14,13 +15,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        // Simulate API call
-        // const response = await teams.getAll();
-        // setTeams(response.data);
-        
-        // Use mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setTeams(MOCK_TEAMS);
+        // Real API call
+        const res = await teamApi.getAll();
+        const data = res?.data ?? res;
+        // Map backend teams to UI shape
+        const mapped = (data || []).map((t) => ({
+          id: t._id || t.id,
+          name: t.name,
+          description: t.description,
+          memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
+          createdAt: t.createdAt || new Date().toISOString(),
+        }));
+        setTeams(mapped.length ? mapped : MOCK_TEAMS);
       } catch (err) {
         setError('Failed to load teams');
         console.error(err);
@@ -34,17 +40,16 @@ const Dashboard = () => {
 
   const handleCreateTeam = async (formData) => {
     try {
-      // Mock API call
-      // const response = await teams.create(formData);
-      // setTeams([...teams, response.data]);
-      
+      // Call backend to create
+      const res = await teamApi.create(formData);
+      const created = res?.data ?? res;
       const newTeam = {
-        id: Math.max(...teams.map((t) => t.id), 0) + 1,
-        ...formData,
-        memberCount: 1,
-        createdAt: new Date().toISOString().split('T')[0],
+        id: created._id || created.id,
+        name: created.name,
+        description: created.description,
+        memberCount: Array.isArray(created.members) ? created.members.length : 1,
+        createdAt: created.createdAt || new Date().toISOString(),
       };
-      
       setTeams([...teams, newTeam]);
     } catch {
       setError('Failed to create team');

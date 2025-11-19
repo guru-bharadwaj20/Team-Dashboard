@@ -4,6 +4,8 @@ import CreateProposalModal from '../components/CreateProposalModal.jsx';
 import ProposalCard from '../components/ProposalCard/ProposalCard.jsx';
 import Loader from '../components/Loader.jsx';
 import { MOCK_TEAMS, MOCK_PROPOSALS } from '../utils/constants.js';
+import { teamApi } from '../api/teamApi.js';
+import { proposalApi } from '../api/proposalApi.js';
 import './TeamBoard.css';
 
 const TeamBoard = () => {
@@ -17,24 +19,69 @@ const TeamBoard = () => {
   useEffect(() => {
     const fetchTeamAndProposals = async () => {
       try {
-        // Simulate API calls
-        // const teamResponse = await teams.getById(teamId);
-        // const proposalsResponse = await proposals.getByTeamId(teamId);
-        
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        
-        const foundTeam = MOCK_TEAMS.find((t) => t.id === parseInt(teamId));
+        // Real API calls
+        const res = await teamApi.getById(teamId);
+        const data = res?.data ?? res;
+        const foundTeam = data.team || data;
         if (!foundTeam) {
           navigate('/error');
           return;
         }
-        
-        setTeam(foundTeam);
-        
-        const teamProposals = MOCK_PROPOSALS.filter(
-          (p) => p.teamId === parseInt(teamId)
-        );
-        setProposals(teamProposals);
+        setTeam({
+          id: foundTeam._id || foundTeam.id,
+          name: foundTeam.name,
+          description: foundTeam.description,
+          memberCount: Array.isArray(foundTeam.members) ? foundTeam.members.length : (foundTeam.memberCount || 0),
+          createdAt: foundTeam.createdAt,
+        });
+
+        const teamProposals = data.proposals || [];
+        // Map proposals to UI-friendly shape
+        const mapped = teamProposals.map((p) => {
+          // count votes per option
+          const counts = p.options.map((opt) => ({ text: opt.text, count: 0 }));
+          for (const v of p.votes) {
+            const idx = counts.findIndex((c) => c.text && (v.optionId.toString() === p.options[counts.indexOf(c)]?._id?.toString()));
+            // fallback: try matching by optionId
+            const byIdIdx = p.options.findIndex((o) => o._id.toString() === v.optionId.toString());
+            const useIdx = byIdIdx >= 0 ? byIdIdx : idx >= 0 ? idx : 0;
+            counts[useIdx].count++;
+          }
+
+          // Map counts into yes/no/abstain if possible
+          const votesObj = { yes: 0, no: 0, abstain: 0 };
+          if (p.options.length >= 3) {
+            // attempt to map by text
+            for (let i = 0; i < Math.min(3, p.options.length); i++) {
+              const txt = (p.options[i].text || '').toLowerCase();
+              if (txt.includes('yes')) votesObj.yes += counts[i].count;
+              else if (txt.includes('no')) votesObj.no += counts[i].count;
+              else if (txt.includes('abstain')) votesObj.abstain += counts[i].count;
+              else {
+                // fallback: distribute into yes/no/abstain by index
+                if (i === 0) votesObj.yes += counts[i].count;
+                if (i === 1) votesObj.no += counts[i].count;
+                if (i === 2) votesObj.abstain += counts[i].count;
+              }
+            }
+          } else {
+            // fewer than 3 options: lump into yes
+            votesObj.yes = counts.reduce((s, c) => s + c.count, 0);
+          }
+
+          return {
+            id: p._id || p.id,
+            teamId: p.teamId,
+            title: p.title,
+            description: p.description,
+            status: p.status || 'open',
+            createdAt: p.createdAt,
+            votes: votesObj,
+            raw: p,
+          };
+        });
+
+        setProposals(mapped.length ? mapped : MOCK_PROPOSALS.filter((p) => p.teamId === parseInt(teamId)));
       } catch (err) {
         console.error(err);
         navigate('/error');
@@ -48,20 +95,33 @@ const TeamBoard = () => {
 
   const handleCreateProposal = async (formData) => {
     try {
-      // Mock API call
-      // const response = await proposals.create(teamId, formData);
-      // setProposals([...proposals, response.data]);
-      
-      const newProposal = {
-        id: Math.max(...proposals.map((p) => p.id), 0) + 1,
-        teamId: parseInt(teamId),
-        ...formData,
-        status: 'open',
-        createdAt: new Date().toISOString().split('T')[0],
-        votes: { yes: 0, no: 0, abstain: 0 },
+      // create proposal via API
+      // Ensure options are present: default to Yes/No/Abstain if not provided
+      const options = formData.options && Array.isArray(formData.options) && formData.options.length >= 2
+        ? formData.options
+        : ['Yes', 'No', 'Abstain'];
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        options,
       };
-      
-      setProposals([...proposals, newProposal]);
+
+      const res = await proposalApi.create(teamId, payload);
+      const created = res?.data ?? res;
+
+      // map to UI shape similar to above
+      const mapped = {
+        id: created._id || created.id,
+        teamId: created.teamId,
+        title: created.title,
+        description: created.description,
+        status: created.status || 'open',
+        createdAt: created.createdAt,
+        votes: { yes: 0, no: 0, abstain: 0 },
+        raw: created,
+      };
+      setProposals([...proposals, mapped]);
     } catch {
       throw new Error('Failed to create proposal');
     }
