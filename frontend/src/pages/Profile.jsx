@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../utils/helpers.js';
-import { user as userAPI } from '../utils/api.js';
+import { user as userAPI, teams, proposals, votes, comments } from '../utils/api.js';
 import './Profile.css';
 
 const Profile = () => {
@@ -11,6 +11,12 @@ const Profile = () => {
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [stats, setStats] = useState({
+    teamsJoined: 0,
+    votesCast: 0,
+    proposalsCreated: 0,
+    comments: 0,
+  });
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
@@ -22,6 +28,29 @@ const Profile = () => {
   });
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Fetch real stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const teamsList = await teams.getAll();
+        const userTeams = (teamsList?.data || teamsList || []).filter(
+          t => Array.isArray(t.members) && t.members.some(m => m._id === user._id)
+        );
+        
+        setStats(prev => ({
+          ...prev,
+          teamsJoined: userTeams.length,
+        }));
+      } catch (err) {
+        console.error('Failed to fetch stats:', err);
+      }
+    };
+
+    if (user?._id) {
+      fetchStats();
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -133,19 +162,19 @@ const Profile = () => {
             <h2 className="profile-section-title">Statistics</h2>
             <div className="profile-stats">
               <div className="stat-card">
-                <div className="stat-value">12</div>
+                <div className="stat-value">{stats.teamsJoined}</div>
                 <div className="stat-label">Teams Joined</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value">47</div>
+                <div className="stat-value">{stats.votesCast}</div>
                 <div className="stat-label">Votes Cast</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value">23</div>
+                <div className="stat-value">{stats.proposalsCreated}</div>
                 <div className="stat-label">Proposals Created</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value">156</div>
+                <div className="stat-value">{stats.comments}</div>
                 <div className="stat-label">Comments</div>
               </div>
             </div>

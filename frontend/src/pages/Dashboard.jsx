@@ -26,10 +26,13 @@ const Dashboard = () => {
           memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
           createdAt: t.createdAt || new Date().toISOString(),
         }));
-        setTeams(mapped.length ? mapped : MOCK_TEAMS);
+        // Don't use placeholder teams - only show real teams
+        setTeams(mapped);
       } catch (err) {
         setError('Failed to load teams');
         console.error(err);
+        // Start with empty teams, not placeholders
+        setTeams([]);
       } finally {
         setLoading(false);
       }
@@ -57,13 +60,14 @@ const Dashboard = () => {
   };
 
   const handleDeleteTeam = async (teamId) => {
-    if (window.confirm('Are you sure you want to delete this team?')) {
+    if (window.confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
       try {
-        // Mock API call
-        // await teams.delete(teamId);
+        await teamApi.delete(teamId);
         setTeams(teams.filter((t) => t.id !== teamId));
-      } catch {
-        setError('Failed to delete team');
+        setError('');
+      } catch (err) {
+        setError(`Failed to delete team: ${err.message || 'Unknown error'}`);
+        console.error('Delete team error:', err);
       }
     }
   };

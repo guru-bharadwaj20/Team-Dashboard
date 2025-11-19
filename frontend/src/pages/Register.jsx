@@ -60,9 +60,9 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const data = await register(formData.name, formData.email, formData.password);
-      setSuccess('Account created successfully! Redirecting to dashboard...');
-      setTimeout(() => navigate('/dashboard'), 1200);
+      await register(formData.name, formData.email, formData.password);
+      setSuccess('Account created successfully! Please log in with your credentials.');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       console.error('Registration error:', err);
       // Handle different error types
