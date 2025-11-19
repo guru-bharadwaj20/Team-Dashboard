@@ -1,44 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { notificationApi } from '../api/notificationApi.js';
+import { useSocket } from '../context/SocketContext.jsx';
+import { SOCKET_EVENTS } from '../utils/socketEvents.js';
+import Loader from '../components/Loader.jsx';
 import './Notifications.css';
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'info',
-      title: 'New Proposal',
-      message: 'A new proposal "Implement Dark Mode" was created in Product Team',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      type: 'success',
-      title: 'Vote Recorded',
-      message: 'Your vote on "Migrate to TypeScript" has been recorded',
-      time: '4 hours ago',
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'New Comment',
-      message: 'Jane commented on "Upgrade Node.js Version"',
-      time: '1 day ago',
-    },
-    {
-      id: 4,
-      type: 'warning',
-      title: 'Voting Deadline',
-      message: 'Voting for "Implement Dark Mode" ends in 2 days',
-      time: '2 days ago',
-    },
-    {
-      id: 5,
-      type: 'success',
-      title: 'Proposal Closed',
-      message: 'Voting closed on "Upgrade Node.js Version"',
-      time: '3 days ago',
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { socket, connected } = useSocket();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  // Listen for new notifications via socket
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    const handleNewNotification = (notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+    };
+
+    socket.on(SOCKET_EVENTS.NOTIFICATION_NEW, handleNewNotification);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.NOTIFICATION_NEW, handleNewNotification);
+    };
+  }, [socket, connected]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await notificationApi.getAll();
+      const data = res?.data ?? res;
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getIcon = (type) => {
     const icons = {
@@ -50,15 +51,42 @@ const Notifications = () => {
     return icons[type] || 'ℹ️';
   };
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
+  const getTimeAgo = (timestamp) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
   };
 
-  const handleClearAll = () => {
-    if (window.confirm('Clear all notifications?')) {
-      setNotifications([]);
+  const handleMarkAsRead = async (id) => {
+    try {
+      await notificationApi.delete(id);
+      setNotifications(notifications.filter((n) => n._id !== id));
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
     }
   };
+
+  const handleClearAll = async () => {
+    if (window.confirm('Clear all notifications?')) {
+      try {
+        await notificationApi.clearAll();
+        setNotifications([]);
+      } catch (err) {
+        console.error('Failed to clear notifications:', err);
+      }
+    }
+  };
+
+  if (loading) return <Loader />;
 
   return (
     <div className="notifications-container">
@@ -81,7 +109,7 @@ const Notifications = () => {
       ) : (
         <div className="notifications-list">
           {notifications.map((notification) => (
-            <div key={notification.id} className="notification-item">
+            <div key={notification._id} className="notification-item">
               <div className={`notification-icon ${notification.type}`}>
                 {getIcon(notification.type)}
               </div>
@@ -93,11 +121,11 @@ const Notifications = () => {
                   {notification.message}
                 </div>
                 <div className="notification-time">
-                  {notification.time}
+                  {getTimeAgo(notification.createdAt)}
                 </div>
               </div>
               <button
-                onClick={() => handleMarkAsRead(notification.id)}
+                onClick={() => handleMarkAsRead(notification._id)}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -117,3 +145,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+

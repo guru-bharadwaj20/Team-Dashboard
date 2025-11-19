@@ -1,5 +1,56 @@
 # Team Decision Board
 
+Full-stack MERN application (backend in `/backend`, frontend in `/frontend`) for creating teams, posting proposals, voting, and commenting.
+
+Quick start (local):
+
+1. Install dependencies
+
+```bash
+# from repo root
+npm install
+npm --prefix frontend install
+npm --prefix backend install
+```
+
+2. Create env files
+
+Copy `.env.example` in `/backend` and fill values. Also copy `/frontend/.env.example` to `/frontend/.env` if needed.
+
+Backend `/backend/.env`:
+
+```
+PORT=5000
+MONGO_URI=<Your MongoDB Atlas URI>
+JWT_SECRET=<A_Strong_Secret>
+CLIENT_URL=http://localhost:5173
+```
+
+Frontend `/frontend/.env`:
+
+```
+VITE_API_URL=http://localhost:5000/api
+```
+
+3. Run both servers (from repo root):
+
+```bash
+npm run dev
+```
+
+This uses `concurrently` to run the backend (`/backend` dev) and the frontend (`/frontend` dev).
+
+API overview
+- Auth: `POST /api/auth/register`, `POST /api/auth/login`
+- Teams: `GET /api/teams`, `POST /api/teams`, `GET /api/teams/:id`, `POST /api/teams/:teamId/proposals`
+- Proposals: `GET /api/proposals/:id`, `POST /api/proposals/:id/votes`, `GET /api/proposals/:id/results`, `GET|POST /api/proposals/:id/comments`
+- Public board: `GET /api/public/board/:shareId`
+
+Notes
+- This scaffold wires the frontend to the backend API endpoints. The frontend still contains some mock data fallbacks for safety when running without a backend.
+- Tailwind CSS is not yet configured — the app uses existing CSS files. If you want Tailwind, I can add it and migrate styles.
+# Team Decision Board
+
 A collaborative web application for teams to create boards, submit proposals, and vote on decisions democratically. Built with React and Vite.
 
 ---

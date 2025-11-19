@@ -1,7 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { isAuthenticated } from '../utils/helpers.js';
 import './LandingPage.css';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect to dashboard if already logged in
+    if (isAuthenticated()) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
   return (
     <div className="landing-page">
       <div className="landing-container">
