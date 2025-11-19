@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader.jsx';
 import { MOCK_PROPOSALS, MOCK_COMMENTS, VOTE_OPTIONS } from '../utils/constants.js';
 import { calculateVotePercentages } from '../utils/helpers.js';
+import { proposalApi } from '../api/proposalApi.js';
 import './ProposalDetails.css';
 
 const ProposalDetails = () => {
@@ -18,26 +19,62 @@ const ProposalDetails = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Simulate API calls
-        // const proposalResponse = await proposals.getById(proposalId);
-        // const commentsResponse = await comments.getByProposal(proposalId);
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const foundProposal = MOCK_PROPOSALS.find(
-          (p) => p.id === parseInt(proposalId)
-        );
-        if (!foundProposal) {
+        // Real API calls
+        const res = await proposalApi.getById(proposalId);
+        const data = res?.data ?? res;
+        const p = data;
+        if (!p) {
           navigate('/error');
           return;
         }
 
-        setProposal(foundProposal);
+        // Build votes object similar to existing UI expectations
+        const counts = p.options.map((opt) => ({ text: opt.text, count: 0 }));
+        for (const v of p.votes) {
+          const idx = p.options.findIndex((o) => o._id.toString() === v.optionId.toString());
+          const useIdx = idx >= 0 ? idx : 0;
+          counts[useIdx].count++;
+        }
 
-        const proposalComments = MOCK_COMMENTS.filter(
-          (c) => c.proposalId === parseInt(proposalId)
-        );
-        setComments(proposalComments);
+        const votesObj = { yes: 0, no: 0, abstain: 0 };
+        if (p.options.length >= 3) {
+          for (let i = 0; i < Math.min(3, p.options.length); i++) {
+            const txt = (p.options[i].text || '').toLowerCase();
+            if (txt.includes('yes')) votesObj.yes += counts[i].count;
+            else if (txt.includes('no')) votesObj.no += counts[i].count;
+            else if (txt.includes('abstain')) votesObj.abstain += counts[i].count;
+            else {
+              if (i === 0) votesObj.yes += counts[i].count;
+              if (i === 1) votesObj.no += counts[i].count;
+              if (i === 2) votesObj.abstain += counts[i].count;
+            }
+          }
+        } else {
+          votesObj.yes = counts.reduce((s, c) => s + c.count, 0);
+        }
+
+        setProposal({
+          id: p._id || p.id,
+          title: p.title,
+          description: p.description,
+          status: p.status || 'open',
+          createdAt: p.createdAt,
+          deadline: p.deadline,
+          votes: votesObj,
+          raw: p,
+        });
+
+        // Comments
+        const commentsRes = await proposalApi.getComments(proposalId);
+        const commentsData = commentsRes?.data ?? commentsRes;
+        // map backend comments to UI shape
+        const mappedComments = (commentsData || []).map((c) => ({
+          id: c._id || `${c.user}-${c.createdAt}`,
+          author: c.user?.name || c.user?.email || 'Anonymous',
+          text: c.text,
+          createdAt: c.createdAt,
+        }));
+        setComments(mappedComments.length ? mappedComments : MOCK_COMMENTS.filter((c) => c.proposalId === parseInt(proposalId)));
       } catch {
         navigate('/error');
       } finally {
@@ -50,21 +87,37 @@ const ProposalDetails = () => {
 
   const handleVote = async (option) => {
     try {
-      // Mock API call
-      // await votes.vote(proposalId, option);
+      // option is like 'yes'|'no'|'abstain' in UI; map to option index for backend
+      // find index in raw.options by matching text
+      const raw = proposal.raw;
+      let optionIndex = 0;
+      if (raw && raw.options) {
+        const idx = raw.options.findIndex((o) => (o.text || '').toLowerCase().includes(option));
+        optionIndex = idx >= 0 ? idx : 0;
+      }
 
+      await proposalApi.vote(proposalId, optionIndex);
       setUserVote(option);
       setVotedMessage(`Vote recorded: ${option.charAt(0).toUpperCase() + option.slice(1)}`);
 
-      // Update vote count
-      const updatedProposal = {
-        ...proposal,
-        votes: {
-          ...proposal.votes,
-          [option]: proposal.votes[option] + 1,
-        },
-      };
-      setProposal(updatedProposal);
+      // refresh results
+      const res = await proposalApi.results(proposalId);
+      const data = res?.data ?? res;
+      const results = data.results || [];
+      // map back to votes object
+      const newVotes = { yes: 0, no: 0, abstain: 0 };
+      for (let i = 0; i < results.length; i++) {
+        const txt = (results[i].text || '').toLowerCase();
+        if (txt.includes('yes')) newVotes.yes += results[i].count;
+        else if (txt.includes('no')) newVotes.no += results[i].count;
+        else if (txt.includes('abstain')) newVotes.abstain += results[i].count;
+        else {
+          if (i === 0) newVotes.yes += results[i].count;
+          if (i === 1) newVotes.no += results[i].count;
+          if (i === 2) newVotes.abstain += results[i].count;
+        }
+      }
+      setProposal({ ...proposal, votes: newVotes });
 
       setTimeout(() => setVotedMessage(''), 3000);
     } catch {
@@ -77,18 +130,17 @@ const ProposalDetails = () => {
     if (!commentText.trim()) return;
 
     try {
-      // Mock API call
-      // const response = await comments.create(proposalId, commentText);
-
-      const newComment = {
-        id: Math.max(...comments.map((c) => c.id), 0) + 1,
-        proposalId: parseInt(proposalId),
-        author: 'You',
-        text: commentText,
-        createdAt: new Date().toISOString(),
-      };
-
-      setComments([...comments, newComment]);
+      await proposalApi.addComment(proposalId, commentText);
+      // refetch comments
+      const res = await proposalApi.getComments(proposalId);
+      const data = res?.data ?? res;
+      const mappedComments = (data || []).map((c) => ({
+        id: c._id || `${c.user}-${c.createdAt}`,
+        author: c.user?.name || c.user?.email || 'Anonymous',
+        text: c.text,
+        createdAt: c.createdAt,
+      }));
+      setComments(mappedComments);
       setCommentText('');
     } catch {
       alert('Failed to add comment');

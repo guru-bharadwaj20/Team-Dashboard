@@ -1,15 +1,15 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, removeAuthToken, removeCurrentUser } from '../../utils/helpers.js';
 import './Navbar.css';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const authenticated = isAuthenticated();
+  const { user, logout } = useAuth();
+  const authenticated = !!user;
 
   const handleLogout = () => {
-    removeAuthToken();
-    removeCurrentUser();
+    logout();
     navigate('/');
   };
 
