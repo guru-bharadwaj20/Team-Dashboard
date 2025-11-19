@@ -1,44 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { user as userAPI } from '../utils/api.js';
 import './Notifications.css';
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'info',
-      title: 'New Proposal',
-      message: 'A new proposal "Implement Dark Mode" was created in Product Team',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      type: 'success',
-      title: 'Vote Recorded',
-      message: 'Your vote on "Migrate to TypeScript" has been recorded',
-      time: '4 hours ago',
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'New Comment',
-      message: 'Jane commented on "Upgrade Node.js Version"',
-      time: '1 day ago',
-    },
-    {
-      id: 4,
-      type: 'warning',
-      title: 'Voting Deadline',
-      message: 'Voting for "Implement Dark Mode" ends in 2 days',
-      time: '2 days ago',
-    },
-    {
-      id: 5,
-      type: 'success',
-      title: 'Proposal Closed',
-      message: 'Voting closed on "Upgrade Node.js Version"',
-      time: '3 days ago',
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const data = await userAPI.getNotifications();
+        setNotifications(data || []);
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err);
+        setNotifications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
   const getIcon = (type) => {
     const icons = {

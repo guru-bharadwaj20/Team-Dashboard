@@ -27,11 +27,18 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid, clear auth data
-      removeAuthToken();
-      removeCurrentUser();
-      // Reload to force redirect to login
-      window.location.href = '/login';
+      // Token expired or invalid, clear auth data ONLY on specific error messages
+      const message = error.response?.data?.message || '';
+      
+      // Only logout if it's a token-related issue, not just any 401
+      if (message.includes('token') || message.includes('authorized')) {
+        removeAuthToken();
+        removeCurrentUser();
+        // Only redirect if not already on login page
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
     }
     return Promise.reject(error);
   }

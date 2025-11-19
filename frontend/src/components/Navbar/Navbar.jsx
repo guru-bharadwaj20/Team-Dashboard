@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isInitialized } = useAuth();
   const authenticated = !!user;
 
   const handleLogout = () => {
@@ -23,7 +23,7 @@ const Navbar = () => {
         </Link>
 
         <div className="navbar-menu">
-          {authenticated ? (
+          {isInitialized && authenticated ? (
             <>
               <Link
                 to="/dashboard"
@@ -47,7 +47,7 @@ const Navbar = () => {
                 Logout
               </button>
             </>
-          ) : (
+          ) : isInitialized ? (
             <>
               <Link to="/login" className="navbar-button">
                 Login
@@ -56,7 +56,7 @@ const Navbar = () => {
                 Register
               </Link>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </nav>
