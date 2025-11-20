@@ -43,12 +43,36 @@ const Navbar = () => {
               >
                 Profile
               </Link>
+              <Link
+                to="/about"
+                className={`navbar-link ${isActive('/about') ? 'active' : ''}`}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className={`navbar-link ${isActive('/contact') ? 'active' : ''}`}
+              >
+                Contact
+              </Link>
               <button className="navbar-button logout" onClick={handleLogout}>
                 Logout
               </button>
             </>
           ) : (
             <>
+              <Link
+                to="/about"
+                className={`navbar-link ${isActive('/about') ? 'active' : ''}`}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className={`navbar-link ${isActive('/contact') ? 'active' : ''}`}
+              >
+                Contact
+              </Link>
               <Link to="/login" className="navbar-button">
                 Login
               </Link>
