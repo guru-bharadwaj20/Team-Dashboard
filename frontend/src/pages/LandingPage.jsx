@@ -19,7 +19,7 @@ const LandingPage = () => {
         <div className="landing-header">
           <h1 className="landing-title">Team Decision Board</h1>
           <p className="landing-subtitle">
-            Streamline team decision-making with transparent voting and proposal management
+            Streamline team decision-making with collaborative feedback and proposal management
           </p>
         </div>
 
@@ -45,7 +45,7 @@ const LandingPage = () => {
             <div className="feature-icon">📊</div>
             <h3 className="feature-title">Real-time Results</h3>
             <p className="feature-description">
-              See voting results in real-time with interactive progress bars
+              See feedback results in real-time with interactive progress bars
             </p>
           </div>
 

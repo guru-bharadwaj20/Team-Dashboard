@@ -58,10 +58,10 @@ export const proposals = {
   delete: (id) => apiClient.delete(`/proposals/${id}`),
 };
 
-// Voting endpoints
-export const votes = {
-  vote: (proposalId, option) =>
-    apiClient.post(`/proposals/${proposalId}/votes`, { option }),
+// Response endpoints
+export const responses = {
+  submitResponse: (proposalId, option) =>
+    apiClient.post(`/proposals/${proposalId}/responses`, { option }),
   getResults: (proposalId) =>
     apiClient.get(`/proposals/${proposalId}/results`),
 };

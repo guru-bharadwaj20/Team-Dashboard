@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar/Navbar.jsx';
+import Footer from './components/Footer/Footer.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import Login from './pages/Login.jsx';
@@ -10,6 +11,8 @@ import ProposalDetails from './pages/ProposalDetails.jsx';
 import PublicBoard from './pages/PublicBoard.jsx';
 import Profile from './pages/Profile.jsx';
 import Notifications from './pages/Notifications.jsx';
+import About from './pages/About.jsx';
+import Contact from './pages/Contact.jsx';
 import ErrorPage from './pages/ErrorPage.jsx';
 import './App.css';
 
@@ -22,6 +25,8 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/board/:shareId" element={<PublicBoard />} />
@@ -73,6 +78,7 @@ function App() {
             <Route path="*" element={<Navigate to="/error" replace />} />
           </Routes>
         </div>
+        <Footer />
       </div>
     </Router>
   );

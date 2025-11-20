@@ -1,4 +1,4 @@
-import { VOTE_OPTIONS, PROPOSAL_STATUS } from './constants.js';
+import { RESPONSE_OPTIONS, PROPOSAL_STATUS } from './constants.js';
 
 /**
  * Format a date to a readable string
@@ -34,23 +34,23 @@ export const formatRelativeTime = (dateString) => {
 };
 
 /**
- * Calculate vote percentages
+ * Calculate response percentages
  */
-export const calculateVotePercentages = (votes) => {
-  if (!votes) return { yes: 0, no: 0, abstain: 0 };
+export const calculateResponsePercentages = (responses) => {
+  if (!responses) return { agree: 0, disagree: 0, neutral: 0 };
 
-  const total = votes.yes + votes.no + votes.abstain;
+  const total = responses.agree + responses.disagree + responses.neutral;
   if (total === 0)
     return {
-      yes: 0,
-      no: 0,
-      abstain: 0,
+      agree: 0,
+      disagree: 0,
+      neutral: 0,
     };
 
   return {
-    yes: Math.round((votes.yes / total) * 100),
-    no: Math.round((votes.no / total) * 100),
-    abstain: Math.round((votes.abstain / total) * 100),
+    agree: Math.round((responses.agree / total) * 100),
+    disagree: Math.round((responses.disagree / total) * 100),
+    neutral: Math.round((responses.neutral / total) * 100),
   };
 };
 
@@ -164,25 +164,25 @@ export const debounce = (func, wait) => {
 };
 
 /**
- * Get vote option label
+ * Get response option label
  */
-export const getVoteLabel = (option) => {
+export const getResponseLabel = (option) => {
   const labels = {
-    [VOTE_OPTIONS.YES]: 'Yes',
-    [VOTE_OPTIONS.NO]: 'No',
-    [VOTE_OPTIONS.ABSTAIN]: 'Abstain',
+    [RESPONSE_OPTIONS.AGREE]: 'Agree',
+    [RESPONSE_OPTIONS.DISAGREE]: 'Disagree',
+    [RESPONSE_OPTIONS.NEUTRAL]: 'Neutral',
   };
   return labels[option] || option;
 };
 
 /**
- * Get vote option color
+ * Get response option color
  */
-export const getVoteColor = (option) => {
+export const getResponseColor = (option) => {
   const colors = {
-    [VOTE_OPTIONS.YES]: '#86efac',
-    [VOTE_OPTIONS.NO]: '#fca5a5',
-    [VOTE_OPTIONS.ABSTAIN]: '#fbbf24',
+    [RESPONSE_OPTIONS.AGREE]: '#86efac',
+    [RESPONSE_OPTIONS.DISAGREE]: '#fca5a5',
+    [RESPONSE_OPTIONS.NEUTRAL]: '#fbbf24',
   };
   return colors[option] || '#e5e7eb';
 };
@@ -192,15 +192,15 @@ export const getVoteColor = (option) => {
  */
 export const getProposalStatusLabel = (status) => {
   const labels = {
-    [PROPOSAL_STATUS.OPEN]: 'Open for Voting',
-    [PROPOSAL_STATUS.CLOSED]: 'Voting Closed',
+    [PROPOSAL_STATUS.OPEN]: 'Open for Feedback',
+    [PROPOSAL_STATUS.CLOSED]: 'Feedback Closed',
     [PROPOSAL_STATUS.PENDING]: 'Pending Review',
   };
   return labels[status] || status;
 };
 
 /**
- * Check if proposal is open for voting
+ * Check if proposal is open for feedback
  */
 export const isProposalOpen = (proposal) => {
   return proposal.status === PROPOSAL_STATUS.OPEN;

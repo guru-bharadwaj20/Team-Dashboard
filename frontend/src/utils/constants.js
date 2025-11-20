@@ -33,7 +33,7 @@ export const MOCK_PROPOSALS = [
     status: 'open',
     createdAt: '2025-01-15',
     deadline: '2025-02-15',
-    votes: { yes: 5, no: 1, abstain: 2 },
+    responses: { agree: 5, disagree: 1, neutral: 2 },
   },
   {
     id: 2,
@@ -44,7 +44,7 @@ export const MOCK_PROPOSALS = [
     status: 'open',
     createdAt: '2025-01-12',
     deadline: '2025-02-01',
-    votes: { yes: 4, no: 3, abstain: 1 },
+    responses: { agree: 4, disagree: 3, neutral: 1 },
   },
   {
     id: 3,
@@ -55,7 +55,7 @@ export const MOCK_PROPOSALS = [
     status: 'closed',
     createdAt: '2025-01-08',
     deadline: '2025-01-22',
-    votes: { yes: 8, no: 2, abstain: 2 },
+    responses: { agree: 8, disagree: 2, neutral: 2 },
   },
 ];
 
@@ -83,17 +83,17 @@ export const MOCK_COMMENTS = [
   },
 ];
 
-// Vote options
-export const VOTE_OPTIONS = {
-  YES: 'yes',
-  NO: 'no',
-  ABSTAIN: 'abstain',
+// Response options
+export const RESPONSE_OPTIONS = {
+  AGREE: 'agree',
+  DISAGREE: 'disagree',
+  NEUTRAL: 'neutral',
 };
 
-export const VOTE_LABELS = {
-  yes: 'Yes',
-  no: 'No',
-  abstain: 'Abstain',
+export const RESPONSE_LABELS = {
+  agree: 'Agree',
+  disagree: 'Disagree',
+  neutral: 'Neutral',
 };
 
 // Proposal statuses
@@ -104,8 +104,8 @@ export const PROPOSAL_STATUS = {
 };
 
 export const PROPOSAL_STATUS_LABELS = {
-  open: 'Open for Voting',
-  closed: 'Voting Closed',
+  open: 'Open for Feedback',
+  closed: 'Feedback Closed',
   pending: 'Pending Review',
 };
 
@@ -147,7 +147,7 @@ export const SUCCESS_MESSAGES = {
   REGISTER_SUCCESS: 'Account created successfully. Please log in.',
   TEAM_CREATED: 'Team created successfully.',
   PROPOSAL_CREATED: 'Proposal created successfully.',
-  VOTE_RECORDED: 'Your vote has been recorded.',
+  RESPONSE_RECORDED: 'Your response has been recorded.',
   COMMENT_ADDED: 'Comment added successfully.',
   PROFILE_UPDATED: 'Profile updated successfully.',
 };

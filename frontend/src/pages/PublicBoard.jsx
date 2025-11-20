@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Loader from '../components/Loader.jsx';
 import { MOCK_PROPOSALS, MOCK_TEAMS } from '../utils/constants.js';
-import { calculateVotePercentages } from '../utils/helpers.js';
+import { calculateResponsePercentages } from '../utils/helpers.js';
 import './PublicBoard.css';
 
 const PublicBoard = () => {
@@ -64,14 +64,14 @@ const PublicBoard = () => {
     );
   }
 
-  const percentages = calculateVotePercentages(proposal.votes);
+  const percentages = calculateResponsePercentages(proposal.responses);
   const total =
-    proposal.votes.yes + proposal.votes.no + proposal.votes.abstain;
+    proposal.responses.agree + proposal.responses.disagree + proposal.responses.neutral;
 
   return (
     <div className="public-board-container">
       <div className="public-board-header">
-        <h1 className="public-board-title">Voting Results</h1>
+        <h1 className="public-board-title">Feedback Results</h1>
         {team && (
           <p className="public-board-subtitle">Team: {team.name}</p>
         )}
@@ -86,58 +86,58 @@ const PublicBoard = () => {
         <div className="public-board-results">
           <div className="public-result-item">
             <div className="public-result-label">
-              <span>Yes</span>
-              <span className="public-result-count">{proposal.votes.yes}</span>
+              <span>Agree</span>
+              <span className="public-result-count">{proposal.responses.agree}</span>
             </div>
             <div className="public-result-bar-container">
               <div
-                className="public-result-bar yes"
+                className="public-result-bar agree"
                 style={{
-                  width: total > 0 ? `${(proposal.votes.yes / total) * 100}%` : '0%',
+                  width: total > 0 ? `${(proposal.responses.agree / total) * 100}%` : '0%',
                 }}
               />
             </div>
             <div className="public-result-percentage">
-              <span>{percentages.yes}%</span>
-              <span>{proposal.votes.yes} votes</span>
+              <span>{percentages.agree}%</span>
+              <span>{proposal.responses.agree} responses</span>
             </div>
           </div>
 
           <div className="public-result-item">
             <div className="public-result-label">
-              <span>No</span>
-              <span className="public-result-count">{proposal.votes.no}</span>
+              <span>Disagree</span>
+              <span className="public-result-count">{proposal.responses.disagree}</span>
             </div>
             <div className="public-result-bar-container">
               <div
-                className="public-result-bar no"
+                className="public-result-bar disagree"
                 style={{
-                  width: total > 0 ? `${(proposal.votes.no / total) * 100}%` : '0%',
+                  width: total > 0 ? `${(proposal.responses.disagree / total) * 100}%` : '0%',
                 }}
               />
             </div>
             <div className="public-result-percentage">
-              <span>{percentages.no}%</span>
-              <span>{proposal.votes.no} votes</span>
+              <span>{percentages.disagree}%</span>
+              <span>{proposal.responses.disagree} responses</span>
             </div>
           </div>
 
           <div className="public-result-item">
             <div className="public-result-label">
-              <span>Abstain</span>
-              <span className="public-result-count">{proposal.votes.abstain}</span>
+              <span>Neutral</span>
+              <span className="public-result-count">{proposal.responses.neutral}</span>
             </div>
             <div className="public-result-bar-container">
               <div
-                className="public-result-bar abstain"
+                className="public-result-bar neutral"
                 style={{
-                  width: total > 0 ? `${(proposal.votes.abstain / total) * 100}%` : '0%',
+                  width: total > 0 ? `${(proposal.responses.neutral / total) * 100}%` : '0%',
                 }}
               />
             </div>
             <div className="public-result-percentage">
-              <span>{percentages.abstain}%</span>
-              <span>{proposal.votes.abstain} votes</span>
+              <span>{percentages.neutral}%</span>
+              <span>{proposal.responses.neutral} responses</span>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ const PublicBoard = () => {
             {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
           </div>
           <div>
-            <strong>Total Votes:</strong> {total}
+            <strong>Total Responses:</strong> {total}
           </div>
         </div>
       </div>
