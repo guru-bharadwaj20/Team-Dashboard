@@ -9,6 +9,7 @@ import teamRoutes from './routes/teams.js';
 import proposalRoutes from './routes/proposals.js';
 import publicRoutes from './routes/public.js';
 import notificationRoutes from './routes/notifications.js';
+import contactRoutes from './routes/contact.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -56,6 +57,7 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health
 app.get('/api/health', (req, res) => res.json({ ok: true }));
