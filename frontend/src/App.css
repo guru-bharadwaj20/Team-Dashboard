@@ -1,11 +1,1 @@
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #f3f4f6;
-}
-
-.app-content {
-  flex: 1;
-  padding: 2rem 0;
-}
+/* App styles now handled by Tailwind classes */

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import CreateProposalModal from '../components/CreateProposalModal.jsx';
-import ProposalCard from '../components/ProposalCard/ProposalCard.jsx';
-import Loader from '../components/Loader.jsx';
-import { teamApi } from '../api/teamApi.js';
-import { proposalApi } from '../api/proposalApi.js';
+import CreateProposalModal from '../components/modals/CreateProposalModal.jsx';
+import ProposalCard from '../components/cards/ProposalCard.jsx';
+import Loader from '../components/common/Loader.jsx';
+import { teamApi, proposalApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SOCKET_EVENTS } from '../utils/socketEvents.js';
-import './TeamBoard.css';
+import { SOCKET_EVENTS } from '../utils/constants.js';
 
 const TeamBoard = () => {
   const { id: teamId } = useParams();
@@ -150,54 +148,56 @@ const TeamBoard = () => {
   if (!team) return null;
 
   return (
-    <div className="team-board-container">
-      <div className="team-board-back">
-        <button
-          className="team-board-back-link"
-          onClick={() => navigate('/dashboard')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#3b82f6',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: 500,
-          }}
-        >
-          ← Back to Teams
-        </button>
-      </div>
-
-      <div className="team-board-header">
-        <h1 className="team-board-title">{team.name}</h1>
-        <button
-          className="team-board-button"
-          onClick={() => setIsModalOpen(true)}
-        >
-          + Create Proposal
-        </button>
-      </div>
-
-      {proposals.length === 0 ? (
-        <div className="team-board-empty">
-          <p className="team-board-empty-text">No proposals yet</p>
-          <p style={{ color: '#6b7280' }}>
-            Create your first proposal to start discussions
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-primary-400 hover:text-primary-300 font-semibold transition-colors duration-200 flex items-center gap-2"
+          >
+            ← Back to Teams
+          </button>
         </div>
-      ) : (
-        <div className="proposals-list">
-          {proposals.map((proposal) => (
-            <ProposalCard key={proposal.id} proposal={proposal} />
-          ))}
-        </div>
-      )}
 
-      <CreateProposalModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateProposal}
-      />
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+              {team.name}
+            </h1>
+            <p className="mt-2 text-gray-400">{team.description}</p>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            + Create Proposal
+          </button>
+        </div>
+
+        {/* Proposals List or Empty State */}
+        {proposals.length === 0 ? (
+          <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl shadow-2xl p-12 border border-gray-700 text-center">
+            <p className="text-2xl font-bold text-white mb-2">No proposals yet</p>
+            <p className="text-gray-400">
+              Create your first proposal to start discussions
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {proposals.map((proposal) => (
+              <ProposalCard key={proposal.id} proposal={proposal} />
+            ))}
+          </div>
+        )}
+
+        <CreateProposalModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleCreateProposal}
+        />
+      </div>
     </div>
   );
 };

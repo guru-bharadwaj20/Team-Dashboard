@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { notificationApi } from '../api/notificationApi.js';
+import { notificationApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SOCKET_EVENTS } from '../utils/socketEvents.js';
-import Loader from '../components/Loader.jsx';
-import './Notifications.css';
+import { SOCKET_EVENTS } from '../utils/constants.js';
+import Loader from '../components/common/Loader.jsx';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -89,57 +88,73 @@ const Notifications = () => {
   if (loading) return <Loader />;
 
   return (
-    <div className="notifications-container">
-      <div className="notifications-header">
-        <h1 className="notifications-title">Notifications</h1>
-        {notifications.length > 0 && (
-          <button
-            className="notifications-button danger"
-            onClick={handleClearAll}
-          >
-            Clear All
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+            Notifications
+          </h1>
+          {notifications.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="px-6 py-3 bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+
+        {/* Notifications List or Empty State */}
+        {notifications.length === 0 ? (
+          <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl shadow-2xl p-12 border border-gray-700 text-center">
+            <p className="text-2xl font-bold text-white">No notifications</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {notifications.map((notification) => (
+              <div
+                key={notification._id}
+                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 p-6 flex items-start gap-4"
+              >
+                {/* Icon */}
+                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                  notification.type === 'success' 
+                    ? 'bg-green-100 text-green-600'
+                    : notification.type === 'error'
+                    ? 'bg-danger-100 text-danger-600'
+                    : notification.type === 'warning'
+                    ? 'bg-yellow-100 text-yellow-600'
+                    : 'bg-primary-100 text-primary-600'
+                }`}>
+                  {getIcon(notification.type)}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-gray-900 text-lg mb-1">
+                    {notification.title}
+                  </div>
+                  <div className="text-gray-700 mb-2">
+                    {notification.message}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {getTimeAgo(notification.createdAt)}
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => handleMarkAsRead(notification._id)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      {notifications.length === 0 ? (
-        <div className="notifications-empty">
-          <p className="notifications-empty-text">No notifications</p>
-        </div>
-      ) : (
-        <div className="notifications-list">
-          {notifications.map((notification) => (
-            <div key={notification._id} className="notification-item">
-              <div className={`notification-icon ${notification.type}`}>
-                {getIcon(notification.type)}
-              </div>
-              <div className="notification-content">
-                <div className="notification-title">
-                  {notification.title}
-                </div>
-                <div className="notification-message">
-                  {notification.message}
-                </div>
-                <div className="notification-time">
-                  {getTimeAgo(notification.createdAt)}
-                </div>
-              </div>
-              <button
-                onClick={() => handleMarkAsRead(notification._id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#9ca3af',
-                  cursor: 'pointer',
-                  fontSize: '1.2rem',
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

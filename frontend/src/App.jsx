@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './components/Navbar/Navbar.jsx';
-import Footer from './components/Footer/Footer.jsx';
-import ProtectedRoute from './components/ProtectedRoute.jsx';
+import Navbar from './components/layout/Navbar.jsx';
+import Footer from './components/layout/Footer.jsx';
+import ProtectedRoute from './components/common/ProtectedRoute.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -19,9 +19,9 @@ import './App.css';
 function App() {
   return (
     <Router>
-      <div className="app">
+      <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
-        <div className="app-content">
+        <div className="flex-1">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
