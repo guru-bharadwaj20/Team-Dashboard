@@ -43,7 +43,7 @@ db.createCollection('proposals', {
         description: { bsonType: 'string' },
         teamId: { bsonType: 'objectId' },
         options: { bsonType: 'array' },
-        votes: { bsonType: 'array' },
+        responses: { bsonType: 'array' },
         status: { enum: ['open', 'closed'] }
       }
     }
@@ -102,11 +102,11 @@ db.proposals.insertMany([
     description: 'Should we add a dark mode theme to the application?',
     teamId: sampleTeams.insertedIds['0'],
     options: [
-      { _id: new ObjectId(), text: 'Yes' },
-      { _id: new ObjectId(), text: 'No' },
-      { _id: new ObjectId(), text: 'Abstain' }
+      { _id: new ObjectId(), text: 'Agree' },
+      { _id: new ObjectId(), text: 'Disagree' },
+      { _id: new ObjectId(), text: 'Neutral' }
     ],
-    votes: [],
+    responses: [],
     status: 'open',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -116,11 +116,11 @@ db.proposals.insertMany([
     description: 'Launch a social media campaign for Q4',
     teamId: sampleTeams.insertedIds['1'],
     options: [
-      { _id: new ObjectId(), text: 'Yes' },
-      { _id: new ObjectId(), text: 'No' },
-      { _id: new ObjectId(), text: 'Abstain' }
+      { _id: new ObjectId(), text: 'Agree' },
+      { _id: new ObjectId(), text: 'Disagree' },
+      { _id: new ObjectId(), text: 'Neutral' }
     ],
-    votes: [],
+    responses: [],
     status: 'open',
     createdAt: new Date(),
     updatedAt: new Date()

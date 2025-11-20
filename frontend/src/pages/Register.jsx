@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { isValidEmail, isValidPassword } from '../utils/helpers.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { authApi } from '../api/authApi.js';
 import './Register.css';
 
 const Register = () => {
@@ -15,7 +15,6 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { register } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,9 +59,9 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const data = await register(formData.name, formData.email, formData.password);
-      setSuccess('Account created successfully! Redirecting to dashboard...');
-      setTimeout(() => navigate('/dashboard'), 1200);
+      await authApi.registerOnly(formData.name, formData.email, formData.password);
+      setSuccess('Registration completed successfully! Redirecting to login...');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       const msg = err?.message || (err?.response?.data?.message) || 'Registration failed. Please try again.';
       setError(msg);

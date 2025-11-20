@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { getCurrentUser } from '../utils/helpers.js';
 import { authApi } from '../api/authApi.js';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import './Profile.css';
 
 const Profile = () => {
   const currentUser = getCurrentUser();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [user] = useState(currentUser);
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
@@ -101,7 +103,12 @@ const Profile = () => {
       await authApi.deleteAccount();
       
       alert('Account deleted successfully');
-      navigate('/');
+      
+      // Clear auth state
+      logout();
+      
+      // Redirect to main page
+      navigate('/', { replace: true });
     } catch (error) {
       alert('Failed to delete account: ' + (error.response?.data?.message || error.message));
     }

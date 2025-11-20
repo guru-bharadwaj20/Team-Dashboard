@@ -47,8 +47,8 @@ Key endpoints implemented (match frontend expectations):
 - `GET /api/teams/:id` — get team + proposals (protected)
 - `POST /api/teams/:teamId/proposals` — create proposal (protected)
 - `GET /api/proposals/:id` — get proposal (protected)
-- `POST /api/proposals/:id/votes` — cast/update vote (protected)
-- `GET /api/proposals/:id/results` — get vote counts (protected)
+- `POST /api/proposals/:id/responses` — cast/update response (protected)
+- `GET /api/proposals/:id/results` — get response counts (protected)
 - `GET|POST /api/proposals/:id/comments` — comments (protected)
 - `GET /api/public/board/:shareId` — public read-only board
 
