@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import CreateTeamModal from '../components/CreateTeamModal.jsx';
-import TeamCard from '../components/TeamCard/TeamCard.jsx';
-import Loader from '../components/Loader.jsx';
+import CreateTeamModal from '../components/modals/CreateTeamModal.jsx';
+import TeamCard from '../components/cards/TeamCard.jsx';
+import Loader from '../components/common/Loader.jsx';
 import { MOCK_TEAMS } from '../utils/constants.js';
-import { teamApi } from '../api/teamApi.js';
+import { teamApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { SOCKET_EVENTS } from '../utils/constants.js';
 import { getCurrentUser } from '../utils/helpers.js';
-import './Dashboard.css';
 
 const Dashboard = () => {
   const [teams, setTeams] = useState([]);
@@ -136,50 +135,57 @@ const Dashboard = () => {
   if (loading) return <Loader />;
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Teams</h1>
-        <button
-          className="dashboard-button"
-          onClick={() => setIsModalOpen(true)}
-        >
-          + Create Team
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-6 sm:py-8 px-3 sm:px-4 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+            Teams
+          </h1>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl sm:transform sm:hover:scale-105 transition-all duration-200"
+          >
+            + Create Team
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 sm:mb-6 bg-danger-900 bg-opacity-50 border border-danger-500 text-danger-200 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Teams Grid or Empty State */}
+        {teams.length === 0 ? (
+          <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-10 md:p-12 border border-gray-700 text-center">
+            <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">👥</div>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">No teams yet</p>
+            <p className="text-sm sm:text-base text-gray-400">
+              Create your first team to get started
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+            {teams.map((team) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                onDelete={team.creator === currentUser?.id ? handleDeleteTeam : null}
+                onJoin={handleJoinTeam}
+                isMember={isUserMember(team)}
+              />
+            ))}
+          </div>
+        )}
+
+        <CreateTeamModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleCreateTeam}
+        />
       </div>
-
-      {error && (
-        <div style={{ color: '#dc2626', marginBottom: '1rem' }}>
-          {error}
-        </div>
-      )}
-
-      {teams.length === 0 ? (
-        <div className="dashboard-empty">
-          <div className="dashboard-empty-icon">👥</div>
-          <p className="dashboard-empty-text">No teams yet</p>
-          <p style={{ color: '#6b7280' }}>
-            Create your first team to get started
-          </p>
-        </div>
-      ) : (
-        <div className="teams-grid">
-          {teams.map((team) => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              onDelete={team.creator === currentUser?.id ? handleDeleteTeam : null}
-              onJoin={handleJoinTeam}
-              isMember={isUserMember(team)}
-            />
-          ))}
-        </div>
-      )}
-
-      <CreateTeamModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateTeam}
-      />
     </div>
   );
 };

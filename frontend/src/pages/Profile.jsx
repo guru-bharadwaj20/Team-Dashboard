@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { getCurrentUser } from '../utils/helpers.js';
-import { authApi } from '../api/authApi.js';
+import { authApi } from '../api/index.js';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import './Profile.css';
 
 const Profile = () => {
   const currentUser = getCurrentUser();
@@ -116,169 +115,177 @@ const Profile = () => {
 
   if (!user) {
     return (
-      <div className="profile-container">
-        <p>Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+        <p className="text-white text-xl">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="profile-container">
-      <div className="profile-header">
-        <h1 className="profile-title">My Profile</h1>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+            My Profile
+          </h1>
+        </div>
 
-      {/* Profile Information */}
-      {!editMode && !changePasswordMode && (
-        <>
-          <div className="profile-info">
-            <div className="profile-info-item">
-              <div className="profile-info-label">Name</div>
-              <div className="profile-info-value">{user.name}</div>
+        {/* Profile Information */}
+        {!editMode && !changePasswordMode && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <div className="text-sm font-semibold text-gray-500 mb-2">Name</div>
+                  <div className="text-xl text-gray-900 font-medium">{user.name}</div>
+                </div>
+
+                <div className="border-b border-gray-200 pb-4">
+                  <div className="text-sm font-semibold text-gray-500 mb-2">Email</div>
+                  <div className="text-xl text-gray-900 font-medium">{user.email}</div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-semibold text-gray-500 mb-2">Member Since</div>
+                  <div className="text-xl text-gray-900 font-medium">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => setChangePasswordMode(true)}
+                className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                Change Password
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                Delete Account
+              </button>
             </div>
           </div>
+        )}
 
-          <div className="profile-info">
-            <div className="profile-info-item">
-              <div className="profile-info-label">Email</div>
-              <div className="profile-info-value">{user.email}</div>
-            </div>
-          </div>
-
-          <div className="profile-info">
-            <div className="profile-info-item">
-              <div className="profile-info-label">Member Since</div>
-              <div className="profile-info-value">
-                {new Date().toLocaleDateString()}
+        {/* Edit Profile Mode */}
+        {editMode && (
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => {
+                    setEditMode(false);
+                    setFormData({
+                      name: user.name,
+                      email: user.email,
+                    });
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          <div className="profile-actions">
-            <button
-              className="profile-button primary"
-              onClick={() => setEditMode(true)}
-            >
-              Edit Profile
-            </button>
-            <button 
-              className="profile-button secondary"
-              onClick={() => setChangePasswordMode(true)}
-            >
-              Change Password
-            </button>
-            <button 
-              className="profile-button danger"
-              onClick={handleDeleteAccount}
-            >
-              Delete Account
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Edit Profile Mode */}
-      {editMode && (
-        <div className="profile-section">
-          <h2 className="profile-section-title">Edit Profile</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="form-group">
-              <label>Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="profile-actions">
-              <button
-                className="profile-button primary"
-                onClick={handleSave}
-              >
-                Save Changes
-              </button>
-              <button
-                className="profile-button secondary"
-                onClick={() => {
-                  setEditMode(false);
-                  setFormData({
-                    name: user.name,
-                    email: user.email,
-                  });
-                }}
-              >
-                Cancel
-              </button>
+        {/* Change Password Mode */}
+        {changePasswordMode && (
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter current password"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter new password (min 6 characters)"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Confirm new password"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={handlePasswordUpdate}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                >
+                  Update Password
+                </button>
+                <button
+                  onClick={() => {
+                    setChangePasswordMode(false);
+                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Change Password Mode */}
-      {changePasswordMode && (
-        <div className="profile-section">
-          <h2 className="profile-section-title">Change Password</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="form-group">
-              <label>Current Password</label>
-              <input
-                type="password"
-                name="currentPassword"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-                placeholder="Enter current password"
-              />
-            </div>
-            <div className="form-group">
-              <label>New Password</label>
-              <input
-                type="password"
-                name="newPassword"
-                value={passwordData.newPassword}
-                onChange={handlePasswordChange}
-                placeholder="Enter new password (min 6 characters)"
-              />
-            </div>
-            <div className="form-group">
-              <label>Confirm New Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-                placeholder="Confirm new password"
-              />
-            </div>
-            <div className="profile-actions">
-              <button
-                className="profile-button primary"
-                onClick={handlePasswordUpdate}
-              >
-                Update Password
-              </button>
-              <button
-                className="profile-button secondary"
-                onClick={() => {
-                  setChangePasswordMode(false);
-                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
