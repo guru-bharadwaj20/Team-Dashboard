@@ -1,39 +1,54 @@
-# Team Decision Board
+# 🧭 Team Decision Board
 
 Full-stack MERN application (backend in `/backend`, frontend in `/frontend`) for creating teams, posting proposals, gathering feedback, and commenting.
 
-Quick start (local):
+## ✨ Features
+- User Authentication (Register/Login)
+- Create and manage teams
+- Team Boards for organizing proposals
+- Add proposals with titles and descriptions
+- Comment and discuss proposals within teams
+- Public read-only board sharing
+- Frontend-Backend integration with Axios
 
-1. Install dependencies
+---
 
+## 🛠 Tech Stack
+**Frontend:** React (Vite), Axios  
+**Backend:** Node.js, Express.js, MongoDB  
+**Auth:** JWT  
+**Styling:** Custom CSS  
+
+---
+
+## 🚀 Installation & Setup
+
+Clone the repository:
 ```bash
-# from repo root
+git clone <repository-url>
+```
+
+Install dependencies:
+```bash
+# From repo root
 npm install
 npm --prefix frontend install
 npm --prefix backend install
 ```
 
-2. Create env files
-
-Copy `.env.example` in `/backend` and fill values. Also copy `/frontend/.env.example` to `/frontend/.env` if needed.
-
-Backend `/backend/.env`:
-
-```
+Configure environment:
+```bash
+Backend /backend/.env
 PORT=5000
-MONGO_URI=<Your MongoDB Atlas URI>
-JWT_SECRET=<A_Strong_Secret>
+MONGO_URI=<Your MongoDB URI>
+JWT_SECRET=<Strong Secret>
 CLIENT_URL=http://localhost:5173
-```
 
-Frontend `/frontend/.env`:
-
-```
+Frontend /frontend/.env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-3. Run both servers (from repo root):
-
+Run development servers:
 ```bash
 npm run dev
 ```
@@ -76,33 +91,23 @@ A collaborative web application for teams to create boards, submit proposals, an
 
 ---
 
-## 📦 Installation & Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd Team-Dashboard/frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-4. Open in browser: Visit http://localhost
-
----
-
-## 📂 Project Structure
-
-src/
-├── components/      # Reusable UI components (Navbar, Cards, Modals)
-├── pages/           # Main Application Screens (Login, Dashboard, etc.)
-├── utils/           # Helper functions and API configuration
-├── App.jsx          # Main Routing Logic
-└── main.jsx         # Entry point
+## 📂 Folder Structure
+```bash
+root/
+│── frontend/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       ├── utils/
+│       ├── App.jsx
+│       └── main.jsx
+│
+└── backend/
+    ├── models/
+    ├── routes/
+    ├── controllers/
+    └── server.js
+```
 
 ---
 
