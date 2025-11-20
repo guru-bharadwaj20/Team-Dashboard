@@ -84,7 +84,7 @@ const CreateProposalModal = ({ isOpen, onClose, onSubmit }) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="deadline">Voting Deadline</label>
+              <label htmlFor="deadline">Feedback Deadline</label>
               <input
                 type="date"
                 id="deadline"

@@ -1,6 +1,6 @@
 # Team Decision Board
 
-Full-stack MERN application (backend in `/backend`, frontend in `/frontend`) for creating teams, posting proposals, voting, and commenting.
+Full-stack MERN application (backend in `/backend`, frontend in `/frontend`) for creating teams, posting proposals, gathering feedback, and commenting.
 
 Quick start (local):
 
@@ -43,7 +43,7 @@ This uses `concurrently` to run the backend (`/backend` dev) and the frontend (`
 API overview
 - Auth: `POST /api/auth/register`, `POST /api/auth/login`
 - Teams: `GET /api/teams`, `POST /api/teams`, `GET /api/teams/:id`, `POST /api/teams/:teamId/proposals`
-- Proposals: `GET /api/proposals/:id`, `POST /api/proposals/:id/votes`, `GET /api/proposals/:id/results`, `GET|POST /api/proposals/:id/comments`
+- Proposals: `GET /api/proposals/:id`, `POST /api/proposals/:id/responses`, `GET /api/proposals/:id/results`, `GET|POST /api/proposals/:id/comments`
 - Public board: `GET /api/public/board/:shareId`
 
 Notes
@@ -51,7 +51,7 @@ Notes
 - Tailwind CSS is not yet configured — the app uses existing CSS files. If you want Tailwind, I can add it and migrate styles.
 # Team Decision Board
 
-A collaborative web application for teams to create boards, submit proposals, and vote on decisions democratically. Built with React and Vite.
+A collaborative web application for teams to create boards, submit proposals, and gather feedback on decisions democratically. Built with React and Vite.
 
 ---
 
@@ -61,8 +61,8 @@ A collaborative web application for teams to create boards, submit proposals, an
 - **Dashboard:** View all your teams and create new ones.
 - **Team Boards:** Manage proposals within specific teams.
 - **Proposals:** Create proposals with titles and descriptions.
-- **Voting System:** Vote "Yes", "No", or "Abstain" and view real-time visual results.
-- **Comments:** Discuss proposals before voting.
+- **Feedback System:** Share feedback "Agree", "Disagree", or "Neutral" and view real-time visual results.
+- **Comments:** Discuss proposals before providing feedback.
 - **Public View:** Share read-only boards with external users.
 
 ---
@@ -110,4 +110,4 @@ src/
 1. Register a new account.
 2. Create a Team via the Dashboard.
 3. Click the team to enter the Team Board.
-4. Create a Proposal and share the link with teammates to vote!
+4. Create a Proposal and share the link with teammates to provide feedback!

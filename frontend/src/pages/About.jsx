@@ -13,7 +13,7 @@ const About = () => {
           <h2>What is Team Dashboard?</h2>
           <p className="about-text">
             Team Dashboard is a collaborative platform that empowers teams to make better decisions together 
-            through transparent voting on proposals and real-time team collaboration. Our mission is to simplify 
+            through collaborative feedback on proposals and real-time team collaboration. Our mission is to simplify 
             teamwork by providing a centralized hub where ideas flourish, decisions are made democratically, 
             and every team member's voice is heard and valued.
           </p>
@@ -33,9 +33,9 @@ const About = () => {
               <p>Share your ideas and get feedback from the team</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">🗳️</div>
-              <h3>Democratic Voting</h3>
-              <p>Vote on proposals and make decisions together</p>
+              <div className="feature-icon">💬</div>
+              <h3>Collaborative Feedback</h3>
+              <p>Provide feedback on proposals and make decisions together</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">📊</div>
