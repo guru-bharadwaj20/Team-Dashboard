@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import CreateTeamModal from '../components/modals/CreateTeamModal.jsx';
 import TeamCard from '../components/cards/TeamCard.jsx';
 import Loader from '../components/common/Loader.jsx';
-import { MOCK_TEAMS } from '../utils/constants.js';
 import { teamApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
@@ -19,11 +18,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        // Real API call
-        const res = await teamApi.getAll();
-        const data = res?.data ?? res;
-        // Map backend teams to UI shape
-        const mapped = (data || []).map((t) => ({
+        const data = await teamApi.getAll();
+        const mapped = (Array.isArray(data) ? data : []).map((t) => ({
           id: t._id || t.id,
           name: t.name,
           description: t.description,
@@ -74,9 +70,7 @@ const Dashboard = () => {
 
   const handleCreateTeam = async (formData) => {
     try {
-      // Call backend to create
-      const res = await teamApi.create(formData);
-      const created = res?.data ?? res;
+      const created = await teamApi.create(formData);
       const newTeam = {
         id: created._id || created.id,
         name: created.name,
@@ -106,10 +100,8 @@ const Dashboard = () => {
   const handleJoinTeam = async (teamId) => {
     try {
       await teamApi.join(teamId);
-      // Refresh teams to get updated member count
-      const res = await teamApi.getAll();
-      const data = res?.data ?? res;
-      const mapped = (data || []).map((t) => ({
+      const data = await teamApi.getAll();
+      const mapped = (Array.isArray(data) ? data : []).map((t) => ({
         id: t._id || t.id,
         name: t.name,
         description: t.description,

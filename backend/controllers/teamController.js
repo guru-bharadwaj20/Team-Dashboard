@@ -36,8 +36,14 @@ export const getTeamById = async (req, res) => {
     const { id } = req.params;
     const team = await Team.findById(id).populate('creator', 'name email').populate('members', 'name email');
     if (!team) return res.status(404).json({ message: 'Team not found' });
-    // include proposals
-    const proposals = await Proposal.find({ teamId: team._id });
+    const rawProposals = await Proposal.find({ teamId: team._id });
+    const proposals = rawProposals.map((p) => {
+      const responses = { agree: 0, disagree: 0, neutral: 0 };
+      for (const v of p.votes) {
+        if (responses[v.vote] !== undefined) responses[v.vote]++;
+      }
+      return { ...p.toObject(), responses, totalVotes: p.votes.length };
+    });
     res.json({ team, proposals });
   } catch (error) {
     console.error('Error fetching team:', error);

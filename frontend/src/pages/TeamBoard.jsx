@@ -19,9 +19,7 @@ const TeamBoard = () => {
   useEffect(() => {
     const fetchTeamAndProposals = async () => {
       try {
-        // Real API calls
-        const res = await teamApi.getById(teamId);
-        const data = res?.data ?? res;
+        const data = await teamApi.getById(teamId);
         const foundTeam = data.team || data;
         if (!foundTeam) {
           navigate('/error');
@@ -37,17 +35,16 @@ const TeamBoard = () => {
 
         const teamProposals = data.proposals || [];
         // Map proposals to UI-friendly shape
-        const mapped = teamProposals.map((p) => {
-          return {
-            id: p._id || p.id,
-            teamId: p.teamId,
-            title: p.title,
-            description: p.description,
-            status: p.status || 'open',
-            createdAt: p.createdAt,
-            raw: p,
-          };
-        });
+        const mapped = teamProposals.map((p) => ({
+          id: p._id || p.id,
+          teamId: p.teamId,
+          title: p.title,
+          description: p.description,
+          status: p.status || 'open',
+          createdAt: p.createdAt,
+          responses: p.responses || { agree: 0, neutral: 0, disagree: 0 },
+          totalVotes: p.totalVotes || 0,
+        }));
 
         setProposals(mapped);
       } catch (err) {
@@ -77,7 +74,8 @@ const TeamBoard = () => {
           description: p.description,
           status: p.status || 'open',
           createdAt: p.createdAt,
-          raw: p,
+          responses: { agree: 0, neutral: 0, disagree: 0 },
+          totalVotes: 0,
         };
         setProposals((prev) => [mapped, ...prev]);
       }
@@ -124,10 +122,7 @@ const TeamBoard = () => {
         options,
       };
 
-      const res = await proposalApi.create(teamId, payload);
-      const created = res?.data ?? res;
-
-      // map to UI shape similar to above
+      const created = await proposalApi.create(teamId, payload);
       const mapped = {
         id: created._id || created.id,
         teamId: created.teamId,
@@ -135,7 +130,8 @@ const TeamBoard = () => {
         description: created.description,
         status: created.status || 'open',
         createdAt: created.createdAt,
-        raw: created,
+        responses: { agree: 0, neutral: 0, disagree: 0 },
+        totalVotes: 0,
       };
       setProposals([...proposals, mapped]);
     } catch {

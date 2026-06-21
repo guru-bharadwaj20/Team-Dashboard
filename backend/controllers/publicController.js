@@ -8,24 +8,35 @@ export const getPublicBoard = async (req, res) => {
     if (!team) return res.status(404).json({ message: 'Board not found' });
 
     const proposals = await Proposal.find({ teamId: team._id });
-    // for each proposal prepare results
+
     const publicProposals = proposals.map((p) => {
-      const counts = p.options.map((opt) => ({ optionId: opt._id, text: opt.text, count: 0 }));
+      const responses = { agree: 0, disagree: 0, neutral: 0 };
       for (const v of p.votes) {
-        const idx = counts.findIndex((c) => c.optionId.toString() === v.optionId.toString());
-        if (idx >= 0) counts[idx].count++;
+        if (responses[v.vote] !== undefined) responses[v.vote]++;
       }
       return {
         id: p._id,
         title: p.title,
         description: p.description,
-        results: counts,
+        status: p.status,
+        responses,
         totalVotes: p.votes.length,
+        options: p.options.map((o) => ({ id: o._id, text: o.text })),
         createdAt: p.createdAt,
+        deadline: p.deadline,
       };
     });
 
-    res.json({ team: { id: team._id, name: team.name, description: team.description, shareId: team.shareId }, proposals: publicProposals });
+    res.json({
+      team: {
+        id: team._id,
+        name: team.name,
+        description: team.description,
+        shareId: team.shareId,
+        memberCount: team.members.length,
+      },
+      proposals: publicProposals,
+    });
   } catch (error) {
     console.error('Error fetching public board:', error);
     res.status(500).json({ message: 'Failed to fetch public board', error: error.message });

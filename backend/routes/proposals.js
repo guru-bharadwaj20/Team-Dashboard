@@ -5,11 +5,13 @@ import {
   deleteProposal,
   addComment,
   getComments,
+  voteOnProposal,
 } from '../controllers/proposalController.js';
 
 const router = express.Router();
 
 router.route('/:id').get(protect, getProposalById).delete(protect, deleteProposal);
+router.route('/:id/vote').post(protect, voteOnProposal);
 router.route('/:id/comments').get(protect, getComments).post(protect, addComment);
 
 export default router;

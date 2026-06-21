@@ -1,43 +1,60 @@
 import { Link } from 'react-router-dom';
 
+const statusStyles = {
+  open: 'bg-green-100 text-green-800 border-green-200',
+  closed: 'bg-gray-100 text-gray-700 border-gray-200',
+  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+};
+
 const ProposalCard = ({ proposal }) => {
-  const statusStyles = {
-    open: 'bg-primary-100 text-primary-800 border-primary-300',
-    closed: 'bg-gray-100 text-gray-800 border-gray-300',
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-300'
-  };
+  const total = proposal.totalVotes || 0;
+  const responses = proposal.responses || { agree: 0, neutral: 0, disagree: 0 };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group">
-      {/* Header */}
+    <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
       <div className="p-6 space-y-3">
-        <div className="flex justify-between items-start gap-4">
-          <h3 className="text-xl font-bold text-gray-900 flex-1 group-hover:text-primary-600 transition-colors duration-200">
+        <div className="flex justify-between items-start gap-3">
+          <h3 className="text-lg font-bold text-gray-900 flex-1 group-hover:text-primary-600 transition-colors">
             {proposal.title}
           </h3>
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusStyles[proposal.status] || statusStyles.pending}`}>
-            {proposal.status?.toUpperCase()}
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border flex-shrink-0 ${statusStyles[proposal.status] || statusStyles.pending}`}>
+            {proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'Open'}
           </span>
         </div>
 
-        <p className="text-gray-600 leading-relaxed line-clamp-2">
-          {proposal.description}
-        </p>
+        {proposal.description && (
+          <p className="text-gray-500 text-sm leading-relaxed line-clamp-2">{proposal.description}</p>
+        )}
+
+        {/* Mini vote bar */}
+        {total > 0 && (
+          <div className="pt-1">
+            <div className="flex rounded-full overflow-hidden h-2 bg-gray-100">
+              <div className="bg-green-500 h-full" style={{ width: `${(responses.agree / total) * 100}%` }} />
+              <div className="bg-yellow-400 h-full" style={{ width: `${(responses.neutral / total) * 100}%` }} />
+              <div className="bg-red-500 h-full" style={{ width: `${(responses.disagree / total) * 100}%` }} />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>{total} vote{total !== 1 ? 's' : ''}</span>
+              <span className="text-green-600 font-medium">{Math.round((responses.agree / total) * 100)}% agree</span>
+            </div>
+          </div>
+        )}
+
+        {total === 0 && (
+          <div className="text-xs text-gray-400 pt-1">No votes yet</div>
+        )}
       </div>
 
-      {/* Footer */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-        <div className="flex items-center text-sm text-gray-500">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+      <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+        <span className="text-xs text-gray-400">
           {new Date(proposal.createdAt).toLocaleDateString()}
-        </div>
-        <Link 
-          to={`/proposal/${proposal.id}`}
-          className="px-5 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transform hover:-translate-y-0.5 transition-all duration-200 shadow-md text-sm"
+        </span>
+        <Link
+          to={`/proposal/${proposal.id || proposal._id}`}
+          className="px-4 py-1.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
         >
-          View Details →
+          View →
         </Link>
       </div>
     </div>
