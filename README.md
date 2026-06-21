@@ -1,199 +1,189 @@
-# 🧭 Team Decision Board
+# Team Decision Board
 
-Full-stack MERN + Socket.io application for creating teams, posting proposals, gathering democratic feedback, real-time updates, notifications, and commenting. Frontend (Vite + React + Tailwind) lives in `/frontend`, backend (Express + MongoDB + Socket.io) in `/backend`.
+A real-time collaborative decision-making platform where teams create proposals, vote democratically, and discuss outcomes — all live via WebSocket.
 
----
-
-## ✨ Core Features
-- Secure JWT authentication (register, login, profile update, password change, account deletion)
-- Create & manage teams (real-time team creation & deletion via Socket.io)
-- Team boards listing proposals (live updates when proposals are added)
-- Create proposals with description, comments, and feedback collection (Agree / Neutral / Disagree)
-- Real-time rooms for teams & proposals (joins / leaves handled via socket events)
-- Comments on proposals + notification system
-- Public read-only board sharing via share link
-- Responsive dark UI theme (black / slate / light blue / light red accents) using Tailwind
-- Consolidated API layer (`frontend/src/api/index.js`)
+Built by **Guru, Harsh, and Gautam**.
 
 ---
 
-## 🛠 Tech Stack
-**Frontend:** React 19, Vite 7, React Router DOM 7, Tailwind CSS 3, Axios, Socket.io client  
-**Backend:** Node.js, Express 4, MongoDB (Mongoose 7), Socket.io 4  
-**Auth:** JWT (access token persisted locally)  
-**Real-time:** Socket.io rooms for team & proposal events  
-**Styling:** Tailwind utility classes + custom gradient theme  
-**Tooling:** Nodemon (backend dev), Vite HMR (frontend), Concurrently (root dev script)  
+## What It Does
+
+Teams often decide by committee email or noisy group chats. This app replaces that with a structured flow:
+
+1. A team member posts a **proposal** with a description and options
+2. Every member votes **Agree / Neutral / Disagree** — one vote per person, changeable
+3. Live progress bars update for everyone via Socket.io the instant a vote comes in
+4. Members discuss in a comment thread on the same page
+5. A public share link lets stakeholders view results read-only, no account needed
 
 ---
 
-## 📦 Monorepo Scripts (root `package.json`)
-```bash
-# Run both frontend & backend in dev mode
-npm run dev
+## Tech Stack
 
-# Start only backend (production style)
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, Vite 7, React Router DOM 7, Tailwind CSS 3 |
+| State / Auth | React Context + localStorage (JWT) |
+| Real-time | Socket.io 4 (WebSocket rooms per team & proposal) |
+| HTTP client | Axios (centralized interceptor for auth + error handling) |
+| Backend | Node.js, Express 4 (ES modules) |
+| Database | MongoDB + Mongoose 7 |
+| Auth | JWT (jsonwebtoken) + bcryptjs |
+
+---
+
+## Features
+
+- **JWT authentication** — register, login, update profile, change password, delete account
+- **Team management** — create teams, join teams, share via unique link, delete (creator only)
+- **Proposals** — title, description, custom options, optional deadline, open/closed/pending status
+- **Real-time voting** — Agree / Neutral / Disagree; users can change their vote; live count via Socket.io
+- **Live results** — animated progress bars update the moment any team member votes
+- **Comments** — discussion thread per proposal; real-time comment push via socket
+- **Notifications** — in-app notifications for new proposals, comments, and team joins
+- **Public board** — shareable read-only URL showing all team proposals and vote results (no login needed)
+- **Responsive dark UI** — mobile-first Tailwind design with a consistent blue/red accent palette
+
+---
+
+## API Reference
+
+| Domain | Method | Path | Auth |
+|---|---|---|---|
+| Auth | POST | `/api/auth/register` | — |
+| Auth | POST | `/api/auth/login` | — |
+| Auth | PUT | `/api/auth/profile` | ✓ |
+| Auth | PUT | `/api/auth/password` | ✓ |
+| Auth | DELETE | `/api/auth/account` | ✓ |
+| Teams | GET | `/api/teams` | ✓ |
+| Teams | POST | `/api/teams` | ✓ |
+| Teams | GET | `/api/teams/:id` | ✓ |
+| Teams | POST | `/api/teams/:id` | ✓ (join) |
+| Teams | DELETE | `/api/teams/:id` | ✓ |
+| Proposals | GET | `/api/teams/:teamId/proposals` | ✓ |
+| Proposals | POST | `/api/teams/:teamId/proposals` | ✓ |
+| Proposals | GET | `/api/proposals/:id` | ✓ |
+| Proposals | DELETE | `/api/proposals/:id` | ✓ |
+| **Voting** | **POST** | **`/api/proposals/:id/vote`** | ✓ |
+| Comments | GET | `/api/proposals/:id/comments` | ✓ |
+| Comments | POST | `/api/proposals/:id/comments` | ✓ |
+| Public | GET | `/api/public/board/:shareId` | — |
+| Notifications | GET | `/api/notifications` | ✓ |
+| Notifications | PATCH | `/api/notifications/:id` | ✓ (mark read) |
+| Notifications | DELETE | `/api/notifications/:id` | ✓ |
+| Notifications | DELETE | `/api/notifications` | ✓ (clear all) |
+| Contact | POST | `/api/contact` | — |
+| Health | GET | `/api/health` | — |
+
+### Vote Endpoint
 
 ```
-Frontend scripts (`frontend/package.json`): `npm run dev`, `build`, `preview`, `lint`  
-Backend scripts (`backend/package.json`): `npm run dev`, `start`  
+POST /api/proposals/:id/vote
+Authorization: Bearer <token>
+Body: { "vote": "agree" | "neutral" | "disagree" }
+
+Response: { message, responses: { agree, neutral, disagree }, totalVotes, userVote }
+```
+
+A user can re-vote to change their answer. The endpoint always returns the updated counts.
 
 ---
 
-## 🚀 Installation & Setup
-Clone & install:
+## Real-time Events (Socket.io)
+
+| Event | Direction | Payload |
+|---|---|---|
+| `join-team` / `leave-team` | client → server | teamId |
+| `join-proposal` / `leave-proposal` | client → server | proposalId |
+| `proposal:created` | server → team room | proposal object |
+| `proposal:updated` | server → proposal room | `{ proposalId, responses, totalVotes }` |
+| `proposal:deleted` | server → team room | `{ proposalId, teamId }` |
+| `comment:added` | server → proposal room | `{ proposalId, comment }` |
+| `team:member-joined` | server → team room | member info |
+| `notification:new` | server → broadcast | `{ userId, type, title, message, link }` |
+
+---
+
+## Setup
+
+### Prerequisites
+
+- Node.js 18+
+- MongoDB (local or Atlas)
+
+### Install
+
 ```bash
-git clone <repository-url>
+git clone <repo-url>
 cd Team-Dashboard
+
+# Install all dependencies
 npm install
 npm --prefix frontend install
 npm --prefix backend install
 ```
 
-Environment variables:
+### Environment Variables
+
 ```bash
 # backend/.env
 PORT=5000
-MONGO_URI=<Your MongoDB URI>
-JWT_SECRET=<Strong Secret>
+MONGO_URI=mongodb://localhost:27017/team-dashboard
+JWT_SECRET=your_super_secret_key_here
 CLIENT_URL=http://localhost:5173
 
 # frontend/.env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Run development:
+### Run (Development)
+
 ```bash
-npm run dev
-```
-Build frontend for production:
-```bash
-cd frontend
-npm run build
-```
-Serve built frontend separately (example):
-```bash
-npx serve dist
+npm run dev        # starts both frontend (port 5173) and backend (port 5000) concurrently
 ```
 
----
+Or separately:
 
-## 🔌 API Endpoints Summary
-| Domain | Method | Path | Description |
-|--------|--------|------|-------------|
-| Auth | POST | /api/auth/register | Register a user |
-| Auth | POST | /api/auth/login | Login and receive token |
-| Auth | PUT | /api/auth/profile | Update profile (protected) |
-| Auth | PUT | /api/auth/password | Change password (protected) |
-| Auth | DELETE | /api/auth/account | Delete account (protected) |
-| Teams | GET | /api/teams | List teams (protected) |
-| Teams | POST | /api/teams | Create team (protected) |
-| Teams | GET | /api/teams/:id | Get team details |
-| Teams | POST | /api/teams/:id | Join team |
-| Teams | DELETE | /api/teams/:id | Delete team |
-| Teams | GET | /api/teams/:teamId/proposals | List team proposals |
-| Teams | POST | /api/teams/:teamId/proposals | Create proposal |
-| Proposals | GET | /api/proposals/:id | Get proposal by id |
-| Proposals | DELETE | /api/proposals/:id | Delete proposal |
-| Proposals | GET | /api/proposals/:id/comments | List comments |
-| Proposals | POST | /api/proposals/:id/comments | Add comment |
-| Public | GET | /api/public/board/:shareId | Fetch public board |
-| Notifications | GET | /api/notifications | List notifications |
-| Notifications | PATCH | /api/notifications/:id | Mark read |
-| Notifications | DELETE | /api/notifications/:id | Delete single |
-| Notifications | DELETE | /api/notifications | Clear all |
-| Contact | POST | /api/contact | Submit contact message |
-| Contact | GET | /api/contact | List contact messages |
-| Contact | GET | /api/contact/:id | Fetch single contact |
-| Contact | PUT | /api/contact/:id/status | Update contact status |
-| Contact | DELETE | /api/contact/:id | Delete contact |
-| Health | GET | /api/health | Service status |
-
----
-
-## 🧩 Real-time Events (Socket.io)
-- `join-team` / `leave-team` — join/leave team rooms
-- `join-proposal` / `leave-proposal` — join/leave proposal rooms
-- Server currently logs connections; extend with custom events (e.g. proposal created, comment added) as needed.
-
----
-
-## 🗂 Frontend Folder Structure (Updated)
 ```bash
-frontend/src/
-├── api/                 # Axios instance & consolidated API methods
-├── components/
-│   ├── layout/          # Navbar, Footer
-│   ├── cards/           # TeamCard, ProposalCard
-│   ├── modals/          # CreateTeamModal, CreateProposalModal
-│   ├── common/          # Loader, ProtectedRoute
-│   └── index.js         # Component barrel exports
-├── context/             # AuthProvider, SocketProvider
-├── pages/               # Landing, Dashboard, Login, Register, etc.
-├── utils/               # helpers.js, constants.js
-├── App.jsx
-└── main.jsx
+npm --prefix backend run dev    # backend only
+npm --prefix frontend run dev   # frontend only
 ```
 
-## 🗂 Backend Folder Structure
+### Build (Production)
+
 ```bash
-backend/
-├── config/              # db connection
-├── controllers/         # route handlers
-├── middleware/          # auth + error handling
-├── models/              # Mongoose schemas
-├── routes/              # Express routers
-├── utils/               # helper utilities
-├── setup-database.mongodb.js  # seed / setup script
-└── server.js            # entry + socket.io server
+cd frontend && npm run build    # outputs to frontend/dist/
 ```
 
 ---
 
-## 🔐 Auth Flow
-1. User registers or logs in → receives JWT token + user object
-2. Token & user persisted via helpers (`helpers.js`) in localStorage
-3. Protected routes use `ProtectedRoute` to redirect unauthenticated users
-4. Socket connection can be extended to authenticate if needed (currently open with CORS origin restriction)
+## Folder Structure
+
+```
+Team-Dashboard/
+├── backend/
+│   ├── config/db.js
+│   ├── controllers/          # authController, teamController, proposalController, ...
+│   ├── middleware/           # authMiddleware (JWT protect), errorHandler
+│   ├── models/               # User, Team, Proposal (with votes + status), Notification, Contact
+│   ├── routes/               # auth, teams, proposals (+ /vote), public, notifications, contact
+│   ├── utils/                # generateToken, socketEvents
+│   └── server.js             # Express + Socket.io entry point
+└── frontend/src/
+    ├── api/index.js           # Axios instance + all API methods (authApi, teamApi, proposalApi, ...)
+    ├── components/            # Navbar, Footer, TeamCard, ProposalCard, modals, Loader, ProtectedRoute
+    ├── context/               # AuthContext, SocketContext
+    ├── pages/                 # LandingPage, Dashboard, TeamBoard, ProposalDetails, Profile, ...
+    └── utils/                 # helpers.js, constants.js
+```
 
 ---
 
-## 🎨 Styling & Design
-- Tailwind CSS utilities across all components
-- Responsive breakpoints: `sm`, `md`, `lg`, `xl`
-    - Smaller typography & spacing on mobile for reduced visual stress
-    - Gradients: `from-gray-900 via-black to-gray-900` backgrounds + blue / red accents
-- Reusable button + card patterns
+## Troubleshooting
 
----
-
-## 🧪 Development Tips
-- If white screen appears: check browser console for missing imports (e.g. `Navigate`) or stale Vite cache. Clear by removing `frontend/node_modules/.vite`.
-- Socket debug: watch server logs for join/leave events.
-- Add new API calls in `frontend/src/api/index.js` following existing async pattern.
-
----
-
-## 📄 License
-Internal / Unspecified. Add a LICENSE file if you plan to open-source.
-
----
-
-## ✅ Roadmap Ideas
-- Add proposal voting aggregation endpoint/results
-- Add optimistic UI updates for comments
-- Implement role-based access (admin vs member)
-- Add rate limiting & security headers
-- Add automated tests (Jest + React Testing Library / Supertest)
-
----
-
-## 🆘 Troubleshooting
-| Issue | Fix |
-|-------|-----|
-| White screen + `Navigate not defined` | Import `Navigate` from `react-router-dom` in `App.jsx` |
-| Socket not connecting | Verify `CLIENT_URL` and CORS origin match |
-| 404 API responses | Confirm `VITE_API_URL` matches backend port |
-| Stale styles | Restart Vite or clear `.vite` cache |
-
-Happy building! 🚀
+| Symptom | Fix |
+|---|---|
+| Socket not connecting | Make sure `CLIENT_URL` in `backend/.env` matches the Vite port (default 5173) |
+| 404 on API calls | Check `VITE_API_URL` in `frontend/.env` matches backend port |
+| Vote not saving | Ensure `JWT_SECRET` is set and token is being sent in the `Authorization` header |
+| Stale Tailwind styles | Delete `frontend/node_modules/.vite` and restart Vite |

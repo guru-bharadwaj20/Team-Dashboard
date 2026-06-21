@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import { getCurrentUser } from '../utils/helpers.js';
+import { getCurrentUser, saveCurrentUser } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Profile = () => {
-  const currentUser = getCurrentUser();
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [user] = useState(currentUser);
+  const stored = getCurrentUser();
+
+  const [user, setUser] = useState(stored);
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
-  
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
   const [formData, setFormData] = useState({
-    name: currentUser?.name || '',
-    email: currentUser?.email || '',
+    name: stored?.name || '',
+    email: stored?.email || '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -23,95 +26,65 @@ const Profile = () => {
     confirmPassword: '',
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const flash = (msg, isError = false) => {
+    if (isError) { setErrorMsg(msg); setSuccessMsg(''); }
+    else { setSuccessMsg(msg); setErrorMsg(''); }
+    setTimeout(() => { setSuccessMsg(''); setErrorMsg(''); }, 4000);
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const handleChange = (e) => setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const handlePasswordChange = (e) => setPasswordData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSave = async () => {
     try {
       const res = await authApi.updateProfile(formData.name, formData.email);
-      
-      alert(res.message || 'Profile updated successfully');
-      
-      // Update local user state
-      setFormData({
-        name: res.user.name,
-        email: res.user.email,
-      });
-      
+      const updated = res?.user || { ...user, name: formData.name, email: formData.email };
+      saveCurrentUser(updated);
+      setUser(updated);
+      setFormData({ name: updated.name, email: updated.email });
       setEditMode(false);
-      
-      // Refresh page to update UI with new user data
-      window.location.reload();
-    } catch (error) {
-      alert('Failed to update profile: ' + (error.response?.data?.message || error.message));
+      flash('Profile updated successfully');
+    } catch (err) {
+      flash('Failed to update profile: ' + (err.response?.data?.message || err.message), true);
     }
   };
 
   const handlePasswordUpdate = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('New passwords do not match');
-      return;
+      flash('New passwords do not match', true); return;
     }
-
     if (passwordData.newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
-      return;
+      flash('Password must be at least 6 characters', true); return;
     }
-
     try {
-      const res = await authApi.changePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
-      
-      alert(res.message || 'Password changed successfully');
+      await authApi.changePassword(passwordData.currentPassword, passwordData.newPassword);
       setChangePasswordMode(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
-      alert('Failed to change password: ' + (error.response?.data?.message || error.message));
+      flash('Password changed successfully');
+    } catch (err) {
+      flash('Failed to change password: ' + (err.response?.data?.message || err.message), true);
     }
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This action cannot be undone and will delete all your teams and proposals.'
-    );
-
-    if (!confirmed) return;
-
-    const doubleConfirm = window.confirm(
-      'This is your last chance. Are you absolutely sure you want to permanently delete your account?'
-    );
-
-    if (!doubleConfirm) return;
-
+    if (!window.confirm('Delete your account? All teams and proposals will be permanently removed.')) return;
+    if (!window.confirm('This cannot be undone. Are you absolutely sure?')) return;
     try {
       await authApi.deleteAccount();
-      
-      alert('Account deleted successfully');
-      
-      // Clear auth state
       logout();
-      
-      // Redirect to main page
       navigate('/', { replace: true });
-    } catch (error) {
-      alert('Failed to delete account: ' + (error.response?.data?.message || error.message));
+    } catch (err) {
+      flash('Failed to delete account: ' + (err.response?.data?.message || err.message), true);
     }
   };
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'Unknown';
 
   if (!user) {
     return (
@@ -123,54 +96,70 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
-            My Profile
-          </h1>
-        </div>
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent mb-8">
+          My Profile
+        </h1>
 
-        {/* Profile Information */}
+        {/* Flash messages */}
+        {successMsg && (
+          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-300 text-green-800 rounded-xl text-sm font-medium">
+            {successMsg}
+          </div>
+        )}
+        {errorMsg && (
+          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-300 text-red-800 rounded-xl text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* View Mode */}
         {!editMode && !changePasswordMode && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="bg-white rounded-2xl shadow-2xl p-8">
-              <div className="space-y-6">
-                <div className="border-b border-gray-200 pb-4">
-                  <div className="text-sm font-semibold text-gray-500 mb-2">Name</div>
-                  <div className="text-xl text-gray-900 font-medium">{user.name}</div>
+              {/* Avatar */}
+              <div className="flex items-center gap-5 mb-8 pb-6 border-b border-gray-100">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                  {initials}
                 </div>
-
-                <div className="border-b border-gray-200 pb-4">
-                  <div className="text-sm font-semibold text-gray-500 mb-2">Email</div>
-                  <div className="text-xl text-gray-900 font-medium">{user.email}</div>
-                </div>
-
                 <div>
-                  <div className="text-sm font-semibold text-gray-500 mb-2">Member Since</div>
-                  <div className="text-xl text-gray-900 font-medium">
-                    {new Date().toLocaleDateString()}
-                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{user.name}</div>
+                  <div className="text-gray-500 text-sm">{user.email}</div>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Full Name</div>
+                  <div className="text-lg text-gray-900 font-medium">{user.name}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</div>
+                  <div className="text-lg text-gray-900 font-medium">{user.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Member Since</div>
+                  <div className="text-lg text-gray-900 font-medium">{memberSince}</div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setEditMode(true)}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow transition-all"
               >
                 Edit Profile
               </button>
               <button
                 onClick={() => setChangePasswordMode(true)}
-                className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl shadow transition-all"
               >
                 Change Password
               </button>
               <button
                 onClick={handleDeleteAccount}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                className="flex-1 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow transition-all"
               >
                 Delete Account
               </button>
@@ -178,11 +167,11 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Edit Profile Mode */}
+        {/* Edit Mode */}
         {editMode && (
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h2>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
                 <input
@@ -190,7 +179,7 @@ const Profile = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 />
               </div>
               <div>
@@ -200,25 +189,16 @@ const Profile = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 />
               </div>
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={handleSave}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                >
+              <div className="flex gap-3 pt-2">
+                <button onClick={handleSave} className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow transition-all">
                   Save Changes
                 </button>
                 <button
-                  onClick={() => {
-                    setEditMode(false);
-                    setFormData({
-                      name: user.name,
-                      email: user.email,
-                    });
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  onClick={() => { setEditMode(false); setFormData({ name: user.name, email: user.email }); }}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all"
                 >
                   Cancel
                 </button>
@@ -231,53 +211,29 @@ const Profile = () => {
         {changePasswordMode && (
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Enter current password"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Enter new password (min 6 characters)"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Confirm new password"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={handlePasswordUpdate}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                >
+            <div className="space-y-5">
+              {['currentPassword', 'newPassword', 'confirmPassword'].map((field) => (
+                <div key={field}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {field === 'currentPassword' ? 'Current Password' : field === 'newPassword' ? 'New Password' : 'Confirm New Password'}
+                  </label>
+                  <input
+                    type="password"
+                    name={field}
+                    value={passwordData[field]}
+                    onChange={handlePasswordChange}
+                    placeholder={field === 'newPassword' ? 'Min 6 characters' : ''}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <button onClick={handlePasswordUpdate} className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow transition-all">
                   Update Password
                 </button>
                 <button
-                  onClick={() => {
-                    setChangePasswordMode(false);
-                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  onClick={() => { setChangePasswordMode(false); setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all"
                 >
                   Cancel
                 </button>
