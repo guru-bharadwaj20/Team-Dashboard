@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { isValidEmail } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { SUCCESS_MESSAGES } from '../utils/constants.js';
 
 const Login = () => {
   const [formData, setFormData] = useState({
