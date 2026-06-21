@@ -1,15 +1,13 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { getAuthToken } from '../utils/helpers.js';
+import { getAuthToken, getCurrentUser } from '../utils/helpers.js';
 
 const SocketContext = createContext(null);
 
 export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (!context) {
-    throw new Error('useSocket must be used within SocketProvider');
-  }
-  return context;
+  const ctx = useContext(SocketContext);
+  if (!ctx) throw new Error('useSocket must be used within SocketProvider');
+  return ctx;
 };
 
 export const SocketProvider = ({ children }) => {
@@ -18,118 +16,65 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // If socket already exists, don't create a new one
-    if (socketRef.current) {
-      console.log('Socket already exists, reusing...');
-      return;
-    }
-
     const token = getAuthToken();
-    if (!token) return; // Don't connect if not authenticated
+    if (!token) return;
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const SOCKET_URL = API_URL.replace('/api', ''); // Remove /api for socket connection
+    // Prevent duplicate connections
+    if (socketRef.current?.connected) return;
 
-    const socketInstance = io(SOCKET_URL, {
+    const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const currentUser = getCurrentUser();
+
+    const s = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity,
-      pingInterval: 25000,
-      pingTimeout: 60000,
-      forceNew: false,
-      multiplex: true,
+      reconnectionAttempts: 10,
     });
 
-    socketInstance.on('connect', () => {
-      console.log('✓ Socket connected:', socketInstance.id);
+    s.on('connect', () => {
       setConnected(true);
+      // Join personal room for targeted notifications
+      if (currentUser?.id) s.emit('join-user', currentUser.id);
     });
 
-    socketInstance.on('disconnect', (reason) => {
-      console.log('✗ Socket disconnected:', reason);
+    s.on('disconnect', (reason) => {
       setConnected(false);
-      
-      // Automatic reconnection will handle most cases
-      if (reason === 'io server disconnect') {
-        // Server forced disconnect, attempt reconnect
-        socketInstance.connect();
-      }
+      if (reason === 'io server disconnect') s.connect();
     });
 
-    socketInstance.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setConnected(false);
-    });
+    s.on('connect_error', () => setConnected(false));
+    s.on('reconnect', () => setConnected(true));
 
-    socketInstance.on('reconnect', (attemptNumber) => {
-      console.log('✓ Socket reconnected after', attemptNumber, 'attempts');
-      setConnected(true);
-    });
-
-    socketInstance.on('reconnect_attempt', (attemptNumber) => {
-      console.log('↻ Attempting to reconnect...', attemptNumber);
-    });
-
-    socketInstance.on('reconnect_error', (error) => {
-      console.error('Reconnection error:', error);
-    });
-
-    socketInstance.on('reconnect_failed', () => {
-      console.error('✗ Failed to reconnect');
-    });
-
-    socketInstance.on('error', (error) => {
-      console.error('Socket error:', error);
-    });
-
-    setSocket(socketInstance);
-    socketRef.current = socketInstance;
+    setSocket(s);
+    socketRef.current = s;
 
     return () => {
-      // Don't disconnect on unmount - only cleanup on full unload
-      // This prevents unnecessary disconnections during navigation
-      console.log('⚠️  Component unmounting (socket persisting)');
+      s.disconnect();
+      socketRef.current = null;
     };
   }, []);
 
-  const joinTeam = (teamId) => {
-    if (socket && connected) {
-      socket.emit('join-team', teamId);
-    }
-  };
+  const joinTeam = useCallback((teamId) => {
+    socketRef.current?.emit('join-team', teamId);
+  }, []);
 
-  const leaveTeam = (teamId) => {
-    if (socket && connected) {
-      socket.emit('leave-team', teamId);
-    }
-  };
+  const leaveTeam = useCallback((teamId) => {
+    socketRef.current?.emit('leave-team', teamId);
+  }, []);
 
-  const joinProposal = (proposalId) => {
-    if (socket && connected) {
-      socket.emit('join-proposal', proposalId);
-    }
-  };
+  const joinProposal = useCallback((proposalId) => {
+    socketRef.current?.emit('join-proposal', proposalId);
+  }, []);
 
-  const leaveProposal = (proposalId) => {
-    if (socket && connected) {
-      socket.emit('leave-proposal', proposalId);
-    }
-  };
-
-  const value = {
-    socket,
-    connected,
-    joinTeam,
-    leaveTeam,
-    joinProposal,
-    leaveProposal,
-  };
+  const leaveProposal = useCallback((proposalId) => {
+    socketRef.current?.emit('leave-proposal', proposalId);
+  }, []);
 
   return (
-    <SocketContext.Provider value={value}>
+    <SocketContext.Provider value={{ socket, connected, joinTeam, leaveTeam, joinProposal, leaveProposal }}>
       {children}
     </SocketContext.Provider>
   );

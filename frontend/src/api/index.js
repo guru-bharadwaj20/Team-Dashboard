@@ -8,23 +8,26 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT to every request
+// Attach JWT
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Unwrap response.data; surface errors
+// Unwrap response.data; surface errors cleanly
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
+    const msg = error.response?.data?.message || error.message || 'Request failed';
+    const enhanced = new Error(msg);
+    enhanced.status = error.response?.status;
+    enhanced.response = error.response;
+    return Promise.reject(enhanced);
   }
 );
 
-// Auth API
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
   registerOnly: (name, email, password) => api.post('/auth/register', { name, email, password }),
   register: async (name, email, password) => {
@@ -43,8 +46,7 @@ export const authApi = {
     if (res?.user) saveCurrentUser(res.user);
     return res;
   },
-  changePassword: (currentPassword, newPassword) =>
-    api.put('/auth/password', { currentPassword, newPassword }),
+  changePassword: (currentPassword, newPassword) => api.put('/auth/password', { currentPassword, newPassword }),
   deleteAccount: async () => {
     const res = await api.delete('/auth/account');
     removeAuthToken(); removeCurrentUser();
@@ -52,7 +54,7 @@ export const authApi = {
   },
 };
 
-// Team API
+// ─── Teams ────────────────────────────────────────────────────────────────────
 export const teamApi = {
   getAll: () => api.get('/teams'),
   getById: (id) => api.get(`/teams/${id}`),
@@ -62,7 +64,7 @@ export const teamApi = {
   delete: (id) => api.delete(`/teams/${id}`),
 };
 
-// Proposal API
+// ─── Proposals ────────────────────────────────────────────────────────────────
 export const proposalApi = {
   getByTeamId: (teamId) => api.get(`/teams/${teamId}/proposals`),
   getById: (id) => api.get(`/proposals/${id}`),
@@ -73,27 +75,57 @@ export const proposalApi = {
   addComment: (proposalId, text) => api.post(`/proposals/${proposalId}/comments`, { text }),
 };
 
-// Public board API (no auth required)
+// ─── Public Board ─────────────────────────────────────────────────────────────
 export const publicBoardApi = {
   getByShareId: (shareId) => api.get(`/public/board/${shareId}`),
 };
 
-// Contact API
-export const contactApi = {
-  submitMessage: (name, email, subject, message) =>
-    api.post('/contact', { name, email, subject, message }),
-  getAllMessages: () => api.get('/contact'),
-  getMessageById: (id) => api.get(`/contact/${id}`),
-  updateMessageStatus: (id, status) => api.put(`/contact/${id}/status`, { status }),
-  deleteMessage: (id) => api.delete(`/contact/${id}`),
-};
-
-// Notification API
+// ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationApi = {
   getAll: () => api.get('/notifications'),
   markAsRead: (id) => api.patch(`/notifications/${id}`),
   delete: (id) => api.delete(`/notifications/${id}`),
   clearAll: () => api.delete('/notifications'),
+};
+
+// ─── Contact ──────────────────────────────────────────────────────────────────
+export const contactApi = {
+  submitMessage: (name, email, subject, message) => api.post('/contact', { name, email, subject, message }),
+};
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+export const analyticsApi = {
+  getDashboard: () => api.get('/analytics'),
+};
+
+// ─── Activity ─────────────────────────────────────────────────────────────────
+export const activityApi = {
+  getFeed: (page = 1, limit = 20) => api.get(`/activity?page=${page}&limit=${limit}`),
+};
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+export const exportApi = {
+  // Returns a URL string — caller opens or fetches it
+  getUrl: (proposalId, format = 'markdown') =>
+    `${API_BASE_URL}/export/proposal/${proposalId}?format=${format}`,
+
+  downloadMarkdown: async (proposalId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/export/proposal/${proposalId}?format=markdown`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Export failed');
+    return response.text();
+  },
+
+  downloadPdf: async (proposalId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/export/proposal/${proposalId}?format=pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('PDF export failed');
+    return response.blob();
+  },
 };
 
 export default api;

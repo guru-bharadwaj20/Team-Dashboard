@@ -11,6 +11,8 @@ import ProposalDetails from './pages/ProposalDetails.jsx';
 import PublicBoard from './pages/PublicBoard.jsx';
 import Profile from './pages/Profile.jsx';
 import Notifications from './pages/Notifications.jsx';
+import Analytics from './pages/Analytics.jsx';
+import ActivityTimeline from './pages/ActivityTimeline.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import ErrorPage from './pages/ErrorPage.jsx';
@@ -69,6 +71,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/activity"
+              element={
+                <ProtectedRoute>
+                  <ActivityTimeline />
                 </ProtectedRoute>
               }
             />
