@@ -1,7 +1,12 @@
 import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
-import { emitGlobalNotification, emitTeamUpdate, SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { emitBroadcast, emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { logActivity } from '../services/activityService.js';
+
+// Legacy aliases used below
+const emitGlobalNotification = emitBroadcast;
+const emitTeamUpdate = emitToTeam;
 
 export const createTeam = async (req, res) => {
   try {
@@ -11,9 +16,13 @@ export const createTeam = async (req, res) => {
     const team = new Team({ name, description, creator: req.user._id, members: [req.user._id] });
     await team.save();
     
-    // No need to emit socket event - the creator gets the response directly
-    // Other users will see the new team when they refresh or when the Dashboard fetches teams
-    
+    const io = req.app.get('io');
+    await logActivity(io, {
+      userId: req.user._id, userName: req.user.name,
+      action: 'team.created', targetId: team._id,
+      targetType: 'team', targetTitle: team.name, teamId: team._id,
+    });
+
     res.status(201).json(team);
   } catch (error) {
     console.error('Error creating team:', error);
@@ -85,7 +94,6 @@ export const joinTeam = async (req, res) => {
         }
       }
       
-      // Emit socket event for new member
       const io = req.app.get('io');
       if (io) {
         emitTeamUpdate(io, id, SOCKET_EVENTS.TEAM_MEMBER_JOINED, {
@@ -94,6 +102,11 @@ export const joinTeam = async (req, res) => {
           memberCount: team.members.length,
         });
       }
+      await logActivity(io, {
+        userId: req.user._id, userName: req.user.name,
+        action: 'team.member_joined', targetId: team._id,
+        targetType: 'team', targetTitle: team.name, teamId: team._id,
+      });
     }
     res.json(team);
   } catch (error) {

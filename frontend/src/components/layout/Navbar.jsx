@@ -61,6 +61,26 @@ const Navbar = () => {
                   Dashboard
                 </Link>
                 <Link
+                  to="/analytics"
+                  className={`px-2 lg:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive('/analytics')
+                      ? 'bg-primary-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  Analytics
+                </Link>
+                <Link
+                  to="/activity"
+                  className={`px-2 lg:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive('/activity')
+                      ? 'bg-primary-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  Activity
+                </Link>
+                <Link
                   to="/notifications"
                   className={`px-2 lg:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive('/notifications')
@@ -122,6 +142,28 @@ const Navbar = () => {
                   }`}
                 >
                   Dashboard
+                </Link>
+                <Link
+                  to="/analytics"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive('/analytics')
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800'
+                  }`}
+                >
+                  Analytics
+                </Link>
+                <Link
+                  to="/activity"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive('/activity')
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800'
+                  }`}
+                >
+                  Activity
                 </Link>
                 <Link
                   to="/notifications"

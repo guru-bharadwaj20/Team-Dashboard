@@ -3,121 +3,94 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import helmet from 'helmet';
 import connectDB from './config/db.js';
+
+// Routes
 import authRoutes from './routes/auth.js';
 import teamRoutes from './routes/teams.js';
 import proposalRoutes from './routes/proposals.js';
 import publicRoutes from './routes/public.js';
 import notificationRoutes from './routes/notifications.js';
 import contactRoutes from './routes/contact.js';
+import analyticsRoutes from './routes/analytics.js';
+import activityRoutes from './routes/activity.js';
+import exportRoutes from './routes/export.js';
+
 import { errorHandler } from './middleware/errorHandler.js';
+import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const PORT = process.env.PORT || 5000;
+
+// ── Socket.io ─────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: { origin: CLIENT_URL, methods: ['GET', 'POST'], credentials: true },
   pingInterval: 25000,
   pingTimeout: 60000,
   transports: ['websocket', 'polling'],
-  allowEIO3: true,
 });
 
-const PORT = process.env.PORT || 5000;
-
-// Make io accessible to routes
 app.set('io', io);
 
-// Connect to MongoDB
+// ── Database ──────────────────────────────────────────────────────────────────
 connectDB()
-  .then(() => {
-    console.log('✓ MongoDB connected');
-  })
-  .catch((err) => {
-    console.error('✗ MongoDB connection failed:', err.message);
-    process.exit(1);
-  });
+  .then(() => console.log('✓ MongoDB connected'))
+  .catch((err) => { console.error('✗ MongoDB failed:', err.message); process.exit(1); });
 
-// Middleware
-app.use(express.json());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  })
-);
+// ── Security Middleware ───────────────────────────────────────────────────────
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(express.json({ limit: '10kb' })); // Prevent large payload DoS
+app.use(apiLimiter); // Global rate limiting
 
-// API routes
-app.use('/api/auth', authRoutes);
+// ── API Routes ────────────────────────────────────────────────────────────────
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/export', exportRoutes);
 
-// Health
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-// Error handler
+// ── Error Handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
-// Socket.io connection handling
+// ── Socket.io Connection Handling ────────────────────────────────────────────
 io.on('connection', (socket) => {
-  console.log('✓ Client connected:', socket.id);
-
   // Join team room
   socket.on('join-team', (teamId) => {
-    try {
-      socket.join(`team:${teamId}`);
-      console.log(`Socket ${socket.id} joined team:${teamId}`);
-    } catch (error) {
-      console.error(`Error joining team ${teamId}:`, error);
-    }
+    if (teamId) socket.join(`team:${teamId}`);
   });
-
-  // Leave team room
   socket.on('leave-team', (teamId) => {
-    try {
-      socket.leave(`team:${teamId}`);
-      console.log(`Socket ${socket.id} left team:${teamId}`);
-    } catch (error) {
-      console.error(`Error leaving team ${teamId}:`, error);
-    }
+    if (teamId) socket.leave(`team:${teamId}`);
   });
 
   // Join proposal room
   socket.on('join-proposal', (proposalId) => {
-    try {
-      socket.join(`proposal:${proposalId}`);
-      console.log(`Socket ${socket.id} joined proposal:${proposalId}`);
-    } catch (error) {
-      console.error(`Error joining proposal ${proposalId}:`, error);
-    }
+    if (proposalId) socket.join(`proposal:${proposalId}`);
   });
-
-  // Leave proposal room
   socket.on('leave-proposal', (proposalId) => {
-    try {
-      socket.leave(`proposal:${proposalId}`);
-      console.log(`Socket ${socket.id} left proposal:${proposalId}`);
-    } catch (error) {
-      console.error(`Error leaving proposal ${proposalId}:`, error);
-    }
+    if (proposalId) socket.leave(`proposal:${proposalId}`);
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log('✗ Client disconnected:', socket.id, 'Reason:', reason);
+  // Join personal notification room (targeted delivery)
+  socket.on('join-user', (userId) => {
+    if (userId) socket.join(`user:${userId}`);
   });
 
-  socket.on('error', (error) => {
-    console.error('Socket error:', socket.id, error);
-  });
+  socket.on('disconnect', () => {});
+  socket.on('error', (err) => console.error('[Socket]', err.message));
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`✓ Server running on port ${PORT}`);
-});
+// ── Start ─────────────────────────────────────────────────────────────────────
+httpServer.listen(PORT, () => console.log(`✓ Server running on port ${PORT}`));
