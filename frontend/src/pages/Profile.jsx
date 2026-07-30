@@ -104,12 +104,12 @@ const Profile = () => {
 
         {/* Flash messages */}
         {successMsg && (
-          <div className="mb-4 px-4 py-3 bg-green-50 border border-green-300 text-green-800 rounded-xl text-sm font-medium">
+          <div role="status" aria-live="polite" className="mb-4 px-4 py-3 bg-green-50 border border-green-300 text-green-800 rounded-xl text-sm font-medium">
             {successMsg}
           </div>
         )}
         {errorMsg && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-300 text-red-800 rounded-xl text-sm font-medium">
+          <div role="alert" aria-live="assertive" className="mb-4 px-4 py-3 bg-red-50 border border-red-300 text-red-800 rounded-xl text-sm font-medium">
             {errorMsg}
           </div>
         )}

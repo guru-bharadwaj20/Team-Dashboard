@@ -88,15 +88,24 @@ const Register = () => {
 
         {/* Form Card */}
         <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 md:p-8 border border-gray-700">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} noValidate aria-describedby={error ? 'register-error' : undefined} className="space-y-4 sm:space-y-6">
             {error && (
-              <div className="bg-danger-900 bg-opacity-50 border border-danger-500 text-danger-200 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm">
+              <div
+                id="register-error"
+                role="alert"
+                aria-live="assertive"
+                className="bg-danger-900 bg-opacity-50 border border-danger-500 text-danger-200 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm"
+              >
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-green-900 bg-opacity-50 border border-green-500 text-green-200 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm">
+              <div
+                role="status"
+                aria-live="polite"
+                className="bg-green-900 bg-opacity-50 border border-green-500 text-green-200 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm"
+              >
                 {success}
               </div>
             )}
