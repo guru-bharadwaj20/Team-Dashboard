@@ -22,3 +22,14 @@ export const protect = async (req, res, next) => {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
+
+/**
+ * Restricts a route to users with the `admin` role.
+ * Must be mounted after `protect`.
+ */
+export const adminOnly = (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+};
