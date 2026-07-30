@@ -18,7 +18,7 @@ import analyticsRoutes from './routes/analytics.js';
 import activityRoutes from './routes/activity.js';
 import exportRoutes from './routes/export.js';
 
-import { errorHandler } from './middleware/errorHandler.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
 import { socketAuth } from './middleware/socketAuth.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
@@ -75,6 +75,11 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/export', exportRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// ── Not Found ─────────────────────────────────────────────────────────────────
+// Unmatched /api routes previously fell through to Express's default HTML error
+// page, which a JSON client cannot parse.
+app.use('/api', notFoundHandler);
 
 // ── Error Handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);
