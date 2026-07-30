@@ -189,6 +189,7 @@ const ProposalDetails = () => {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
   const { socket, connected, joinProposal, leaveProposal } = useSocket();
   const { user: currentUser } = useAuth();
 
@@ -244,17 +245,18 @@ const ProposalDetails = () => {
     joinProposal(proposalId);
 
     const handleCommentAdded = (data) => {
-      if (data.proposalId === proposalId) {
-        setComments((prev) => [
-          ...prev,
-          {
-            id: data.comment._id,
-            author: data.comment.user?.name || 'Anonymous',
-            text: data.comment.text,
-            createdAt: data.comment.createdAt,
-          },
-        ]);
-      }
+      if (data.proposalId !== proposalId) return;
+      const incoming = {
+        id: data.comment._id,
+        author: data.comment.user?.name || 'Anonymous',
+        text: data.comment.text,
+        createdAt: data.comment.createdAt,
+      };
+      // The author receives this event too, and their own POST may still be in
+      // flight, so insertion is idempotent on comment id.
+      setComments((prev) =>
+        prev.some((c) => c.id === incoming.id) ? prev : [...prev, incoming]
+      );
     };
 
     const handleVoteUpdate = (data) => {
@@ -316,13 +318,29 @@ const ProposalDetails = () => {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    const text = commentText.trim();
+    if (!text || postingComment) return;
+    setPostingComment(true);
     try {
-      await proposalApi.addComment(proposalId, commentText);
-      await refreshComments();
+      const created = await proposalApi.addComment(proposalId, text);
       setCommentText('');
+      // Insert the created comment directly. Refetching the whole list here raced
+      // the socket broadcast and could duplicate the author's own comment.
+      if (created?.comment) {
+        const added = {
+          id: created.comment._id,
+          author: created.comment.user?.name || currentUser?.name || 'You',
+          text: created.comment.text,
+          createdAt: created.comment.createdAt,
+        };
+        setComments((prev) => (prev.some((c) => c.id === added.id) ? prev : [...prev, added]));
+      } else {
+        await refreshComments();
+      }
     } catch (err) {
       alert(`Failed to add comment: ${err.message}`);
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -501,10 +519,10 @@ const ProposalDetails = () => {
               />
               <button
                 type="submit"
-                disabled={!commentText.trim()}
+                disabled={!commentText.trim() || postingComment}
                 className="mt-3 px-6 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Post Comment
+                {postingComment ? 'Posting…' : 'Post Comment'}
               </button>
             </form>
           )}
