@@ -12,6 +12,11 @@
 const AGREE_THRESHOLD = 0.70;        // 70% agreement required
 const PARTICIPATION_THRESHOLD = 0.50; // at least 50% of members must vote
 
+// Absolute floor on turnout. Percentages alone are degenerate at small n: a
+// two-person team hit 70% agreement and 50% participation on a single agree
+// vote, resolving the proposal before anyone else had seen it.
+const MIN_VOTES = 2;
+
 /**
  * Pure calculation — no DB access, no mutations.
  * @param {Array} votes - proposal.votes array
@@ -30,6 +35,10 @@ export const evaluateConsensus = (votes, memberCount) => {
   const participationRate = memberCount > 0 ? (totalVotes / memberCount) * 100 : 0;
 
   const reached =
+    // A team of one can never reach consensus with anyone, and an unknown member
+    // count must not be treated as a team of one.
+    memberCount >= MIN_VOTES &&
+    totalVotes >= MIN_VOTES &&
     agreePercentage >= AGREE_THRESHOLD * 100 &&
     participationRate >= PARTICIPATION_THRESHOLD * 100;
 
@@ -39,4 +48,5 @@ export const evaluateConsensus = (votes, memberCount) => {
 export const CONSENSUS_THRESHOLDS = {
   AGREE_THRESHOLD,
   PARTICIPATION_THRESHOLD,
+  MIN_VOTES,
 };
