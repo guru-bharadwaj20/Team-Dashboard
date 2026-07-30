@@ -119,17 +119,17 @@ const Analytics = () => {
           <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
             Analytics
           </h1>
-          <p className="text-gray-400 mt-1 text-sm">Platform-wide decision intelligence</p>
+          <p className="text-gray-400 mt-1 text-sm">Decision intelligence across your teams</p>
         </div>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Teams"      value={data.totalTeams}         sub="active workspaces" />
+          <StatCard label="Your Teams"       value={data.totalTeams}         sub="workspaces you belong to" />
           <StatCard label="Total Proposals"  value={data.totalProposals}     sub="decisions tracked" />
           <StatCard label="Resolved"         value={data.resolvedProposals}  sub="consensus reached" color="text-green-400" />
           <StatCard label="Open"             value={data.openProposals}      sub="awaiting votes"    color="text-blue-400" />
-          <StatCard label="Acceptance Rate"  value={`${data.acceptanceRate}%`}  sub="of proposals resolved"  color="text-green-400" />
-          <StatCard label="Participation"    value={`${data.participationRate}%`} sub="of members voted"     color="text-yellow-400" />
+          <StatCard label="Resolution Rate"  value={`${data.resolutionRate}%`}  sub="of proposals resolved"  color="text-green-400" />
+          <StatCard label="Participation"    value={`${data.participationRate}%`} sub="team members voting, averaged" color="text-yellow-400" />
           <StatCard label="Avg Votes"        value={data.averageVotes}       sub="per proposal" />
           <StatCard label="Avg Comments"     value={data.averageComments}    sub="per proposal" />
         </div>
