@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { isValidEmail, isValidPassword } from '../utils/helpers.js';
+import { isValidEmail, getPasswordError } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 
 const Register = () => {
@@ -46,8 +46,9 @@ const Register = () => {
       return;
     }
 
-    if (!isValidPassword(formData.password)) {
-      setError('Password must be at least 6 characters long');
+    const passwordError = getPasswordError(formData.password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 

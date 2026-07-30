@@ -5,6 +5,7 @@ import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
 import { generateToken } from '../utils/generateToken.js';
 import { setAuthCookie, clearAuthCookie } from '../utils/authCookie.js';
+import { isValidEmail, normalizeEmail, validatePassword, validateText } from '../utils/validators.js';
 
 /** The only user fields ever sent to a client. */
 const publicUser = (user) => ({
@@ -18,17 +19,26 @@ const publicUser = (user) => ({
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide name, email and password' });
+
+    const nameError = validateText(name, 'Name', { min: 1, max: 80 });
+    if (nameError) return res.status(400).json({ message: nameError });
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
-    const existing = await User.findOne({ email });
+    const passwordError = validatePassword(password);
+    if (passwordError) return res.status(400).json({ message: passwordError });
+
+    const normalizedEmail = normalizeEmail(email);
+
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: 'Email already in use' });
 
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const user = new User({ name, email, passwordHash });
+    const user = new User({ name: String(name).trim(), email: normalizedEmail, passwordHash });
     await user.save();
 
     setAuthCookie(res, generateToken({ id: user._id }));
@@ -43,9 +53,11 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Provide email and password' });
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      return res.status(400).json({ message: 'Provide email and password' });
+    }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizeEmail(email) });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -77,17 +89,27 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({ message: 'Please provide name or email to update' });
     }
 
-    // Check if email is already taken by another user
-    if (email && email !== req.user.email) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: 'Email already in use' });
-      }
+    const updateData = {};
+
+    if (name !== undefined) {
+      const nameError = validateText(name, 'Name', { min: 1, max: 80 });
+      if (nameError) return res.status(400).json({ message: nameError });
+      updateData.name = String(name).trim();
     }
 
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    if (email !== undefined) {
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ message: 'Please provide a valid email address' });
+      }
+      const normalizedEmail = normalizeEmail(email);
+      if (normalizedEmail !== req.user.email) {
+        const existingUser = await User.findOne({ email: normalizedEmail });
+        if (existingUser) {
+          return res.status(400).json({ message: 'Email already in use' });
+        }
+      }
+      updateData.email = normalizedEmail;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
@@ -111,9 +133,8 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: 'Please provide current and new password' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'New password must be at least 6 characters' });
-    }
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) return res.status(400).json({ message: passwordError });
 
     const user = await User.findById(req.user._id);
     if (!user) {

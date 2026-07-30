@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getCurrentUser, saveCurrentUser } from '../utils/helpers.js';
+import { getCurrentUser, saveCurrentUser, getPasswordError } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -53,9 +53,8 @@ const Profile = () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       flash('New passwords do not match', true); return;
     }
-    if (passwordData.newPassword.length < 6) {
-      flash('Password must be at least 6 characters', true); return;
-    }
+    const passwordError = getPasswordError(passwordData.newPassword);
+    if (passwordError) { flash(passwordError, true); return; }
     try {
       await authApi.changePassword(passwordData.currentPassword, passwordData.newPassword);
       setChangePasswordMode(false);

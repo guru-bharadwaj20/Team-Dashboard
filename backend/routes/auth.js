@@ -9,10 +9,11 @@ import {
   deleteAccount,
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { registerLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-router.post('/register', register);
+router.post('/register', registerLimiter, register);
 router.post('/login', login);
 router.post('/logout', logout);
 router.get('/me', protect, getMe);

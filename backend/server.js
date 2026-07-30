@@ -21,6 +21,7 @@ import exportRoutes from './routes/export.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
 import { socketAuth } from './middleware/socketAuth.js';
+import { sanitizeRequest } from './middleware/sanitize.js';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: CLIENT_URL, credentials: true }));
 app.use(express.json({ limit: '10kb' })); // Prevent large payload DoS
 app.use(cookieParser());
+app.use(sanitizeRequest); // Strip Mongo operators from all user input
 app.use(apiLimiter); // Global rate limiting
 
 // ── API Routes ────────────────────────────────────────────────────────────────
