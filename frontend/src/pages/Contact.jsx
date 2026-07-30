@@ -125,15 +125,24 @@ const Contact = () => {
 
           {/* Contact Form */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-2xl p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} noValidate aria-describedby={error ? 'contact-error' : undefined} className="space-y-6">
               {error && (
-                <div className="bg-danger-100 border border-danger-400 text-danger-800 px-4 py-3 rounded-lg">
+                <div
+                  id="contact-error"
+                  role="alert"
+                  aria-live="assertive"
+                  className="bg-danger-100 border border-danger-400 text-danger-800 px-4 py-3 rounded-lg"
+                >
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-lg">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-lg"
+                >
                   {success}
                 </div>
               )}

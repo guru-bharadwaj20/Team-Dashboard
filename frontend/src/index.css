@@ -7,14 +7,46 @@
     @apply box-border;
   }
 
+  :root {
+    /*
+     * The app renders dark page surfaces with light content cards. Declaring the
+     * scheme is what lets the browser theme the parts CSS cannot reach —
+     * scrollbars, date pickers, autofill, spinners — which otherwise rendered
+     * light-on-light against the dark gradients.
+     */
+    color-scheme: dark light;
+  }
+
   body {
     @apply m-0 bg-gray-50 text-gray-900 antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   }
 
+  /* Page shells are dark, so the document background should be too — otherwise
+     overscroll on iOS and Safari flashes white past the gradient. */
+  html {
+    @apply bg-gray-900;
+  }
+
   #root {
     @apply min-h-screen;
+  }
+
+  /*
+   * A visible focus ring on every interactive element, for keyboard users only.
+   * Most controls previously had no focus style at all: only .input-field and
+   * the three .btn-* classes carried one, so tabbing through a page gave no
+   * indication of position.
+   */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-900;
+  }
+
+  /* On light cards the offset colour has to flip to stay visible. */
+  :where(.bg-white, .bg-gray-50, .bg-gray-100)
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    @apply ring-offset-white;
   }
 }
 
