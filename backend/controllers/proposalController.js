@@ -18,9 +18,9 @@ const notifyUser = async (io, userId, { type, title, message, link, relatedId, r
   try {
     const n = await Notification.create({ userId, type, title, message, link, relatedId, relatedType });
     if (io) {
-      emitToUser(io, userId.toString(), SOCKET_EVENTS.NOTIFICATION_NEW, {
-        id: n._id, userId, type, title, message, link,
-      });
+      // Emit the persisted document verbatim so the socket payload and the REST
+      // payload have identical shapes (notably `_id`, `read` and `createdAt`).
+      emitToUser(io, userId.toString(), SOCKET_EVENTS.NOTIFICATION_NEW, n.toObject());
     }
   } catch (err) {
     console.error('[Notification] Failed to create:', err.message);

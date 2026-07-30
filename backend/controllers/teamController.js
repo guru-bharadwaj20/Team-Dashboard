@@ -1,11 +1,10 @@
 import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
-import { emitBroadcast, emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
 import { logActivity } from '../services/activityService.js';
 
-// Legacy aliases used below
-const emitGlobalNotification = emitBroadcast;
+// Legacy alias used below
 const emitTeamUpdate = emitToTeam;
 
 export const createTeam = async (req, res) => {
@@ -81,9 +80,10 @@ export const joinTeam = async (req, res) => {
       team.members.push(req.user._id);
       await team.save();
       
-      // Create notification for team creator
+      // Notify the team creator only. This was previously an io.emit() broadcast,
+      // which delivered one member's notification to every connected client.
       if (team.creator.toString() !== req.user._id.toString()) {
-        await Notification.create({
+        const notification = await Notification.create({
           userId: team.creator,
           type: 'info',
           title: 'New Team Member',
@@ -92,20 +92,13 @@ export const joinTeam = async (req, res) => {
           relatedId: id,
           relatedType: 'team',
         });
-        
-        // Emit real-time notification to team creator
+
         const io = req.app.get('io');
         if (io) {
-          io.emit(SOCKET_EVENTS.NOTIFICATION_NEW, {
-            userId: team.creator.toString(),
-            type: 'info',
-            title: 'New Team Member',
-            message: `${req.user.name} joined your team "${team.name}"`,
-            link: `/team/${id}`,
-          });
+          emitToUser(io, team.creator.toString(), SOCKET_EVENTS.NOTIFICATION_NEW, notification.toObject());
         }
       }
-      
+
       const io = req.app.get('io');
       if (io) {
         emitTeamUpdate(io, id, SOCKET_EVENTS.TEAM_MEMBER_JOINED, {
@@ -139,10 +132,11 @@ export const deleteTeam = async (req, res) => {
     // Delete the team
     await Team.findByIdAndDelete(id);
     
-    // Emit socket event for team deletion
+    // Emit to the team's own room only. A global broadcast told every connected
+    // user about the deletion of a team they could not see.
     const io = req.app.get('io');
     if (io) {
-      emitGlobalNotification(io, SOCKET_EVENTS.TEAM_DELETED, {
+      emitToTeam(io, id, SOCKET_EVENTS.TEAM_DELETED, {
         teamId: id,
         teamName: team.name,
       });
