@@ -102,16 +102,13 @@ const TeamBoard = () => {
 
   const handleCreateProposal = async (formData) => {
     try {
-      // create proposal via API
-      // Ensure options are present: default to Yes/No/Abstain if not provided
-      const options = formData.options && Array.isArray(formData.options) && formData.options.length >= 2
-        ? formData.options
-        : ['Yes', 'No', 'Abstain'];
-
+      // The modal now collects real options and a deadline. The deadline used to
+      // be gathered by the form and then silently dropped from this payload.
       const payload = {
         title: formData.title,
         description: formData.description,
-        options,
+        options: formData.options,
+        ...(formData.deadline ? { deadline: formData.deadline } : {}),
       };
 
       const mapped = mapProposal(await proposalApi.create(teamId, payload));
