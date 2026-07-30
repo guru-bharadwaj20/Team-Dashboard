@@ -1,0 +1,8 @@
+{
+  "name": "@team-dashboard/shared",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "events.js",
+  "description": "Contract shared by the backend and frontend: socket event names, activity tables and status labels. The type field is required — without it Node resolves these files as CommonJS, because neither the repo root nor this directory is covered by the backend's package.json."
+}

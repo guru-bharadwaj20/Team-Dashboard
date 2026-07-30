@@ -290,6 +290,12 @@ const ProposalDetails = () => {
       }
     };
 
+    // Emitted when the deadline passes and the proposal is closed automatically.
+    const handleStatusChanged = (data) => {
+      if (data.proposalId !== proposalId) return;
+      setProposal((prev) => (prev ? { ...prev, status: data.status, closedAt: data.closedAt } : prev));
+    };
+
     const handleAiSummary = (data) => {
       if (data.proposalId === proposalId) {
         setAiSummary(data.summary);
@@ -301,12 +307,14 @@ const ProposalDetails = () => {
     socket.on(SOCKET_EVENTS.PROPOSAL_UPDATED,  handleVoteUpdate);
     socket.on(SOCKET_EVENTS.PROPOSAL_RESOLVED, handleResolved);
     socket.on(SOCKET_EVENTS.AI_SUMMARY_READY,  handleAiSummary);
+    socket.on(SOCKET_EVENTS.PROPOSAL_STATUS_CHANGED, handleStatusChanged);
 
     return () => {
       socket.off(SOCKET_EVENTS.COMMENT_ADDED,     handleCommentAdded);
       socket.off(SOCKET_EVENTS.PROPOSAL_UPDATED,  handleVoteUpdate);
       socket.off(SOCKET_EVENTS.PROPOSAL_RESOLVED, handleResolved);
       socket.off(SOCKET_EVENTS.AI_SUMMARY_READY,  handleAiSummary);
+      socket.off(SOCKET_EVENTS.PROPOSAL_STATUS_CHANGED, handleStatusChanged);
       leaveProposal(proposalId);
     };
   }, [socket, connected, proposalId, joinProposal, leaveProposal]);

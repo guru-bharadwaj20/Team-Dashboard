@@ -1,19 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { activityApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SOCKET_EVENTS, ACTIVITY_LABELS } from '../utils/constants.js';
-
-const ACTIVITY_ICONS = {
-  'team.created':       '🏗️',
-  'team.deleted':       '🗑️',
-  'team.member_joined': '👋',
-  'proposal.created':   '📝',
-  'proposal.deleted':   '🗑️',
-  'proposal.resolved':  '🎯',
-  'vote.cast':          '🗳️',
-  'vote.changed':       '🔄',
-  'comment.added':      '💬',
-};
+import { SOCKET_EVENTS, ACTIVITY_LABELS, ACTIVITY_ICONS } from '../utils/constants.js';
 
 const TYPE_COLORS = {
   'team.created':       'bg-blue-700',

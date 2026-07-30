@@ -6,9 +6,6 @@ import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
 import { cascadeTeamDelete, withTransaction } from '../services/cascadeService.js';
 
-// Legacy alias used below
-const emitTeamUpdate = emitToTeam;
-
 export const createTeam = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -142,7 +139,7 @@ export const joinTeam = async (req, res) => {
 
       const io = req.app.get('io');
       if (io) {
-        emitTeamUpdate(io, id, SOCKET_EVENTS.TEAM_MEMBER_JOINED, {
+        emitToTeam(io, id, SOCKET_EVENTS.TEAM_MEMBER_JOINED, {
           teamId: id,
           member: { id: req.user._id, name: req.user.name, email: req.user.email },
           memberCount: team.members.length,

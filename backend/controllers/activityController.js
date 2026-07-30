@@ -1,17 +1,7 @@
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import Activity from '../models/Activity.js';
+import { ACTIVITY_LABELS } from '../../shared/events.js';
 
-const ACTION_LABELS = {
-  'team.created': 'created team',
-  'team.deleted': 'deleted team',
-  'team.member_joined': 'joined team',
-  'proposal.created': 'created proposal',
-  'proposal.deleted': 'deleted proposal',
-  'proposal.resolved': 'resolved proposal',
-  'vote.cast': 'voted on',
-  'vote.changed': 'changed vote on',
-  'comment.added': 'commented on',
-};
 
 export const getActivityFeed = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -32,7 +22,7 @@ export const getActivityFeed = asyncHandler(async (req, res) => {
     userId: a.userId?._id || a.userId,
     userName: a.userName,
     action: a.action,
-    actionLabel: ACTION_LABELS[a.action] || a.action,
+    actionLabel: ACTIVITY_LABELS[a.action] || a.action,
     targetId: a.targetId,
     targetType: a.targetType,
     targetTitle: a.targetTitle,
