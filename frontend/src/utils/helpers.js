@@ -70,40 +70,28 @@ export const isValidPassword = (password) => {
 };
 
 /**
- * Check if user is authenticated
+ * Whether a session is likely active.
+ *
+ * The JWT lives in an httpOnly cookie and is deliberately unreadable from
+ * JavaScript, so this reflects the cached profile only. The server is the
+ * authority — AuthContext confirms with GET /auth/me on boot.
  */
-export const isAuthenticated = () => {
-  const token = localStorage.getItem('authToken');
-  return !!token;
-};
+export const isAuthenticated = () => !!getCurrentUser();
 
 /**
- * Get auth token from localStorage
- */
-export const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
-
-/**
- * Save auth token to localStorage
- */
-export const saveAuthToken = (token) => {
-  localStorage.setItem('authToken', token);
-};
-
-/**
- * Remove auth token from localStorage
- */
-export const removeAuthToken = () => {
-  localStorage.removeItem('authToken');
-};
-
-/**
- * Get current user info from localStorage
+ * Get current user info from localStorage.
+ * Only non-sensitive profile fields are cached here, never a credential.
  */
 export const getCurrentUser = () => {
   const userJson = localStorage.getItem('currentUser');
-  return userJson ? JSON.parse(userJson) : null;
+  if (!userJson) return null;
+  try {
+    return JSON.parse(userJson);
+  } catch {
+    // A corrupt value would otherwise throw on every read and blank the app.
+    localStorage.removeItem('currentUser');
+    return null;
+  }
 };
 
 /**

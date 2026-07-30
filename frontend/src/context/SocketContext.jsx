@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { getAuthToken } from '../utils/helpers.js';
+import { getCurrentUser } from '../utils/helpers.js';
 
 const SocketContext = createContext(null);
 
@@ -16,8 +16,7 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (!token) return;
+    if (!getCurrentUser()) return;
 
     // Prevent duplicate connections
     if (socketRef.current?.connected) return;
@@ -25,7 +24,9 @@ export const SocketProvider = ({ children }) => {
     const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
 
     const s = io(SOCKET_URL, {
-      auth: { token },
+      // The handshake authenticates from the httpOnly auth cookie, which the
+      // browser only attaches when credentials are enabled.
+      withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,

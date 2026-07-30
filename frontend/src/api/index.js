@@ -1,18 +1,14 @@
 import axios from 'axios';
-import { getAuthToken, saveAuthToken, saveCurrentUser, removeAuthToken, removeCurrentUser } from '../utils/helpers.js';
+import { saveCurrentUser, removeCurrentUser } from '../utils/helpers.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// The session lives in an httpOnly cookie the browser attaches automatically.
+// Nothing here reads or forwards a token, so an XSS bug cannot steal the session.
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-});
-
-// Attach JWT
-api.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+  withCredentials: true,
 });
 
 // Unwrap response.data; surface errors cleanly
@@ -32,15 +28,23 @@ export const authApi = {
   registerOnly: (name, email, password) => api.post('/auth/register', { name, email, password }),
   register: async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
-    if (res?.token) { saveAuthToken(res.token); saveCurrentUser(res.user); }
+    if (res?.user) saveCurrentUser(res.user);
     return res;
   },
   login: async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    if (res?.token) { saveAuthToken(res.token); saveCurrentUser(res.user); }
+    if (res?.user) saveCurrentUser(res.user);
     return res;
   },
-  logout: () => { removeAuthToken(); removeCurrentUser(); },
+  // Server-side: clears the httpOnly cookie the client cannot touch itself.
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      removeCurrentUser();
+    }
+  },
+  me: () => api.get('/auth/me'),
   updateProfile: async (name, email) => {
     const res = await api.put('/auth/profile', { name, email });
     if (res?.user) saveCurrentUser(res.user);
@@ -49,7 +53,7 @@ export const authApi = {
   changePassword: (currentPassword, newPassword) => api.put('/auth/password', { currentPassword, newPassword }),
   deleteAccount: async () => {
     const res = await api.delete('/auth/account');
-    removeAuthToken(); removeCurrentUser();
+    removeCurrentUser();
     return res;
   },
 };
@@ -111,18 +115,16 @@ export const exportApi = {
     `${API_BASE_URL}/export/proposal/${proposalId}?format=${format}`,
 
   downloadMarkdown: async (proposalId) => {
-    const token = getAuthToken();
     const response = await fetch(`${API_BASE_URL}/export/proposal/${proposalId}?format=markdown`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('Export failed');
     return response.text();
   },
 
   downloadPdf: async (proposalId) => {
-    const token = getAuthToken();
     const response = await fetch(`${API_BASE_URL}/export/proposal/${proposalId}?format=pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('PDF export failed');
     return response.blob();

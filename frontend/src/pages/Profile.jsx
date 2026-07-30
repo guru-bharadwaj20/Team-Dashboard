@@ -71,7 +71,7 @@ const Profile = () => {
     if (!window.confirm('This cannot be undone. Are you absolutely sure?')) return;
     try {
       await authApi.deleteAccount();
-      logout();
+      await logout();
       navigate('/', { replace: true });
     } catch (err) {
       flash('Failed to delete account: ' + (err.response?.data?.message || err.message), true);
