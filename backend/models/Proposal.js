@@ -2,12 +2,6 @@ import mongoose from 'mongoose';
 
 const optionSchema = new mongoose.Schema({ text: { type: String, required: true } });
 
-const commentSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  text: { type: String, required: true, maxlength: 2000 },
-  createdAt: { type: Date, default: Date.now },
-});
-
 const voteSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   vote: { type: String, enum: ['agree', 'disagree', 'neutral'], required: true },
@@ -30,8 +24,11 @@ const proposalSchema = new mongoose.Schema(
     description: { type: String, trim: true, maxlength: 5000 },
     status: { type: String, enum: ['open', 'closed', 'pending', 'resolved'], default: 'open', index: true },
     options: [optionSchema],
+    // Bounded by team membership (one per member) and always read whole for
+    // tallying, so votes stay embedded. Comments do not — see models/Comment.js.
     votes: [voteSchema],
-    comments: [commentSchema],
+    // Denormalised count so proposal lists do not have to join the thread.
+    commentCount: { type: Number, default: 0, min: 0 },
     creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     deadline: { type: Date },
     // Consensus fields
@@ -46,6 +43,8 @@ const proposalSchema = new mongoose.Schema(
 
 // Compound index for efficient team-based queries
 proposalSchema.index({ teamId: 1, createdAt: -1 });
+// Serves the deadline sweeper, which scans open proposals past their deadline.
+proposalSchema.index({ status: 1, deadline: 1 });
 
 const Proposal = mongoose.model('Proposal', proposalSchema);
 export default Proposal;

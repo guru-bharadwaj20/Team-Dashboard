@@ -1,4 +1,5 @@
 import Proposal from '../models/Proposal.js';
+import Comment from '../models/Comment.js';
 
 const pct = (n, total) => (total > 0 ? Math.round((n / total) * 100) : 0);
 const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A');
@@ -197,8 +198,15 @@ export const exportProposal = async (req, res) => {
     const { id } = req.params;
     const format = (req.query.format || 'markdown').toLowerCase();
 
-    const proposal = await Proposal.findById(id).populate('comments.user', 'name');
-    if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
+    // Comments live in their own collection now, so they are fetched alongside
+    // the proposal and attached for the builders below.
+    const [found, comments] = await Promise.all([
+      Proposal.findById(id),
+      Comment.find({ proposalId: id }).sort({ createdAt: 1 }).populate('user', 'name').lean(),
+    ]);
+    if (!found) return res.status(404).json({ message: 'Proposal not found' });
+
+    const proposal = { ...found.toObject(), comments };
 
     if (format === 'pdf') {
       await buildPDF(proposal, res);

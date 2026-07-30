@@ -190,13 +190,18 @@ const ProposalDetails = () => {
   const [voting, setVoting] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [commentTotal, setCommentTotal] = useState(0);
   const { socket, connected, joinProposal, leaveProposal } = useSocket();
   const { user: currentUser } = useAuth();
 
   const refreshComments = useCallback(async () => {
-    const commentsData = await proposalApi.getComments(proposalId);
+    const res = await proposalApi.getComments(proposalId);
+    // The endpoint returns { comments, pagination } now that comments are their
+    // own collection; the array form is tolerated for safety.
+    const list = Array.isArray(res) ? res : res?.comments || [];
+    setCommentTotal(Array.isArray(res) ? list.length : res?.pagination?.total ?? list.length);
     setComments(
-      (commentsData || []).map((c) => ({
+      list.map((c) => ({
         id: c._id,
         author: c.user?.name || c.user?.email || 'Anonymous',
         text: c.text,
@@ -254,9 +259,11 @@ const ProposalDetails = () => {
       };
       // The author receives this event too, and their own POST may still be in
       // flight, so insertion is idempotent on comment id.
-      setComments((prev) =>
-        prev.some((c) => c.id === incoming.id) ? prev : [...prev, incoming]
-      );
+      setComments((prev) => {
+        if (prev.some((c) => c.id === incoming.id)) return prev;
+        setCommentTotal((n) => n + 1);
+        return [...prev, incoming];
+      });
     };
 
     const handleVoteUpdate = (data) => {
@@ -333,7 +340,11 @@ const ProposalDetails = () => {
           text: created.comment.text,
           createdAt: created.comment.createdAt,
         };
-        setComments((prev) => (prev.some((c) => c.id === added.id) ? prev : [...prev, added]));
+        setComments((prev) => {
+          if (prev.some((c) => c.id === added.id)) return prev;
+          setCommentTotal((n) => n + 1);
+          return [...prev, added];
+        });
       } else {
         await refreshComments();
       }
@@ -506,7 +517,7 @@ const ProposalDetails = () => {
 
         {/* Comments Section */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Discussion ({comments.length})</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Discussion ({commentTotal || comments.length})</h2>
 
           {isOpen && (
             <form onSubmit={handleAddComment} className="mb-8">

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
+import Comment from '../models/Comment.js';
 import Activity from '../models/Activity.js';
 
 /**
@@ -23,12 +24,14 @@ const purgeReferences = async (ids, session) => {
   ]);
 };
 
-/** Cascade for a single deleted proposal. */
+/** Cascade for a single deleted proposal: its thread and its references. */
 export const cascadeProposalDelete = async (proposalId, session) => {
+  const opts = session ? { session } : {};
+  await Comment.deleteMany({ proposalId }, opts);
   await purgeReferences([proposalId], session);
 };
 
-/** Cascade for a deleted team: its proposals and everything referencing them. */
+/** Cascade for a deleted team: its proposals, their threads, and all references. */
 export const cascadeTeamDelete = async (teamId, session) => {
   const opts = session ? { session } : {};
 
@@ -36,6 +39,7 @@ export const cascadeTeamDelete = async (teamId, session) => {
   const proposalIds = proposals.map((p) => p._id);
 
   await purgeReferences([...proposalIds, teamId], session);
+  await Comment.deleteMany({ teamId }, opts);
   await Proposal.deleteMany({ teamId }, opts);
   await Activity.deleteMany({ teamId }, opts);
 };
@@ -65,19 +69,16 @@ export const cascadeUserDelete = async (userId, session) => {
   const ownProposals = await Proposal.find({ creator: userId }).select('_id').session(session || null);
   const ownProposalIds = ownProposals.map((p) => p._id);
   await purgeReferences(ownProposalIds, session);
+  await Comment.deleteMany({ proposalId: { $in: ownProposalIds } }, opts);
   await Proposal.deleteMany({ creator: userId }, opts);
 
-  // Their votes and comments on proposals that survive.
+  // Their votes on, and comments about, proposals that survive.
   await Proposal.updateMany(
     { 'votes.user': userId },
     { $pull: { votes: { user: userId } } },
     opts
   );
-  await Proposal.updateMany(
-    { 'comments.user': userId },
-    { $pull: { comments: { user: userId } } },
-    opts
-  );
+  await Comment.deleteMany({ user: userId }, opts);
 
   // Their own notifications, and any addressed to them.
   await Notification.deleteMany({ userId }, opts);
