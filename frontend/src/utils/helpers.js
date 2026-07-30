@@ -1,4 +1,4 @@
-import { RESPONSE_OPTIONS, PROPOSAL_STATUS } from './constants.js';
+import { PROPOSAL_STATUS, PROPOSAL_STATUS_LABELS, RESPONSE_LABELS, RESPONSE_OPTIONS } from './constants.js';
 
 /**
  * Format a date to a readable string
@@ -146,7 +146,8 @@ export const getInitials = (name) => {
  * Generate a unique ID
  */
 export const generateId = () => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // slice, not the deprecated substr.
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 };
 
 /**
@@ -165,16 +166,10 @@ export const debounce = (func, wait) => {
 };
 
 /**
- * Get response option label
+ * Get response option label. Reads the shared RESPONSE_LABELS map rather than
+ * rebuilding an identical table on every call.
  */
-export const getResponseLabel = (option) => {
-  const labels = {
-    [RESPONSE_OPTIONS.AGREE]: 'Agree',
-    [RESPONSE_OPTIONS.DISAGREE]: 'Disagree',
-    [RESPONSE_OPTIONS.NEUTRAL]: 'Neutral',
-  };
-  return labels[option] || option;
-};
+export const getResponseLabel = (option) => RESPONSE_LABELS[option] || option;
 
 /**
  * Get response option color
@@ -189,16 +184,13 @@ export const getResponseColor = (option) => {
 };
 
 /**
- * Get proposal status label
+ * Get proposal status label.
+ *
+ * Delegates to the single PROPOSAL_STATUS_LABELS map in constants.js. This used
+ * to hold a second, competing table that disagreed with it ("Open for Feedback"
+ * vs "Open for Voting") and omitted `resolved` entirely.
  */
-export const getProposalStatusLabel = (status) => {
-  const labels = {
-    [PROPOSAL_STATUS.OPEN]: 'Open for Feedback',
-    [PROPOSAL_STATUS.CLOSED]: 'Feedback Closed',
-    [PROPOSAL_STATUS.PENDING]: 'Pending Review',
-  };
-  return labels[status] || status;
-};
+export const getProposalStatusLabel = (status) => PROPOSAL_STATUS_LABELS[status] || status;
 
 /**
  * Check if proposal is open for feedback
