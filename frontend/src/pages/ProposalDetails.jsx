@@ -37,7 +37,7 @@ const AISummaryPanel = ({ summary, loading: aiLoading }) => {
     return (
       <div className="bg-gradient-to-br from-indigo-900 to-purple-900 border border-indigo-700 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl animate-spin">✨</span>
+          <span className="text-2xl animate-spin" aria-hidden="true">✨</span>
           <h3 className="text-white font-bold text-lg">AI is generating summary…</h3>
         </div>
         <div className="space-y-3 animate-pulse">
@@ -54,7 +54,7 @@ const AISummaryPanel = ({ summary, loading: aiLoading }) => {
   return (
     <div className="bg-gradient-to-br from-indigo-900 to-purple-900 border border-indigo-600 rounded-2xl p-6 space-y-5">
       <div className="flex items-center gap-2">
-        <span className="text-2xl">✨</span>
+        <span className="text-2xl" aria-hidden="true">✨</span>
         <h3 className="text-white font-bold text-lg">AI Decision Summary</h3>
         {summary.generatedAt && (
           <span className="ml-auto text-xs text-indigo-400">{new Date(summary.generatedAt).toLocaleDateString()}</span>
@@ -399,7 +399,7 @@ const ProposalDetails = () => {
         {/* Consensus Banner */}
         {isResolved && (
           <div className="bg-gradient-to-r from-green-800 to-emerald-800 border border-green-600 rounded-2xl p-5 flex items-center gap-4">
-            <div className="text-4xl">🎯</div>
+            <div className="text-4xl" aria-hidden="true">🎯</div>
             <div>
               <div className="text-white font-extrabold text-lg">Consensus Reached!</div>
               <div className="text-green-200 text-sm">

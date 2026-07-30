@@ -32,7 +32,7 @@ const ActivityItem = ({ activity, isNew = false }) => (
     {/* Icon */}
     <div className="flex-shrink-0 flex flex-col items-center">
       <div className={`w-9 h-9 rounded-full ${TYPE_COLORS[activity.action] || 'bg-gray-700'} flex items-center justify-center text-base`}>
-        {ACTIVITY_ICONS[activity.action] || '•'}
+        <span aria-hidden="true">{ACTIVITY_ICONS[activity.action] || '•'}</span>
       </div>
       <div className="flex-1 w-0.5 bg-gray-700 mt-2 mb-1" />
     </div>

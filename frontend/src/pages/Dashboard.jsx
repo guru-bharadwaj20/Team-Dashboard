@@ -149,7 +149,7 @@ const Dashboard = () => {
         {/* Teams Grid or Empty State */}
         {teams.length === 0 ? (
           <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-10 md:p-12 border border-gray-700 text-center">
-            <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">👥</div>
+            <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4" aria-hidden="true">👥</div>
             <p className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">No teams yet</p>
             <p className="text-sm sm:text-base text-gray-400">
               Create your first team, or join one with a share code
