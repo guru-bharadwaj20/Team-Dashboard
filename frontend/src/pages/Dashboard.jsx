@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import CreateTeamModal from '../components/modals/CreateTeamModal.jsx';
 import TeamCard from '../components/cards/TeamCard.jsx';
 import Loader from '../components/common/Loader.jsx';
@@ -25,6 +25,7 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
+  const [query, setQuery] = useState('');
   const { socket, connected } = useSocket();
   const { user: currentUser } = useAuth();
 
@@ -103,6 +104,14 @@ const Dashboard = () => {
     }
   };
 
+  const visibleTeams = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return teams;
+    return teams.filter(
+      (t) => t.name?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q)
+    );
+  }, [teams, query]);
+
   if (loading) return <Loader />;
 
   return (
@@ -146,6 +155,21 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Search */}
+        {teams.length > 3 && (
+          <div className="mb-4 sm:mb-6">
+            <label htmlFor="team-search" className="sr-only">Search teams</label>
+            <input
+              id="team-search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search teams…"
+              className="w-full sm:max-w-sm px-4 py-2.5 text-sm bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        )}
+
         {/* Teams Grid or Empty State */}
         {teams.length === 0 ? (
           <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-10 md:p-12 border border-gray-700 text-center">
@@ -155,9 +179,14 @@ const Dashboard = () => {
               Create your first team, or join one with a share code
             </p>
           </div>
+        ) : visibleTeams.length === 0 ? (
+          <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-8 border border-gray-700 text-center">
+            <p className="text-lg font-bold text-white mb-1">No matching teams</p>
+            <p className="text-sm text-gray-300">Try a different search term.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-            {teams.map((team) => (
+            {visibleTeams.map((team) => (
               <TeamCard
                 key={team.id}
                 team={team}
