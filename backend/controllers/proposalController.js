@@ -163,15 +163,25 @@ export const voteOnProposal = async (req, res) => {
     // ── If consensus reached → emit resolution + trigger AI summary ──
     if (resolved) {
       if (io) {
-        emitToTeam(io, proposal.teamId.toString(), SOCKET_EVENTS.PROPOSAL_RESOLVED, {
-          proposalId: id, teamId: proposal.teamId,
+        const payload = {
+          proposalId: id,
+          teamId: proposal.teamId,
           consensusPercentage: proposal.consensusPercentage,
+          closedAt: proposal.closedAt,
           title: proposal.title,
-        });
+        };
+        // Emitted to both rooms. Anyone viewing the proposal page is only in the
+        // proposal room, so a team-only emit meant the people actually watching
+        // the decision never saw it resolve or received the AI summary.
+        emitToTeam(io, proposal.teamId.toString(), SOCKET_EVENTS.PROPOSAL_RESOLVED, payload);
+        emitToProposal(io, id, SOCKET_EVENTS.PROPOSAL_RESOLVED, payload);
       }
 
-      // Notify all team members
-      const members = team?.members || [];
+      // Notify every member except the person whose vote triggered resolution —
+      // they just performed the action and do not need to be told about it.
+      const members = (team?.members || []).filter(
+        (memberId) => memberId.toString() !== req.user._id.toString()
+      );
       await Promise.all(
         members.map((memberId) =>
           notifyUser(io, memberId, {
@@ -259,8 +269,11 @@ export const addComment = async (req, res) => {
       targetType: 'comment', targetTitle: proposal.title, teamId: proposal.teamId,
     });
 
-    res.status(201).json({ message: 'Comment added' });
+    // Return the created comment so the author can render it without refetching
+    // the whole thread (which raced the socket broadcast and produced duplicates).
+    res.status(201).json({ message: 'Comment added', comment: newComment });
   } catch (err) {
+    console.error('addComment:', err);
     res.status(500).json({ message: 'Failed to add comment' });
   }
 };
