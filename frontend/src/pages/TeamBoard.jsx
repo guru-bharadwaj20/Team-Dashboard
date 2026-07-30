@@ -7,6 +7,18 @@ import { teamApi, proposalApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 
+// Normalises a proposal document from the API or a socket payload.
+const mapProposal = (p) => ({
+  id: p._id || p.id,
+  teamId: p.teamId,
+  title: p.title,
+  description: p.description,
+  status: p.status || 'open',
+  createdAt: p.createdAt,
+  responses: p.responses || { agree: 0, neutral: 0, disagree: 0 },
+  totalVotes: p.totalVotes || 0,
+});
+
 const TeamBoard = () => {
   const { id: teamId } = useParams();
   const navigate = useNavigate();
@@ -33,21 +45,8 @@ const TeamBoard = () => {
           createdAt: foundTeam.createdAt,
         });
 
-        const teamProposals = data.proposals || [];
-        // Map proposals to UI-friendly shape
-        const mapped = teamProposals.map((p) => ({
-          id: p._id || p.id,
-          teamId: p.teamId,
-          title: p.title,
-          description: p.description,
-          status: p.status || 'open',
-          createdAt: p.createdAt,
-          responses: p.responses || { agree: 0, neutral: 0, disagree: 0 },
-          totalVotes: p.totalVotes || 0,
-        }));
-
-        setProposals(mapped);
-      } catch (err) {
+        setProposals((data.proposals || []).map(mapProposal));
+      } catch {
         navigate('/error');
       } finally {
         setLoading(false);
@@ -65,20 +64,13 @@ const TeamBoard = () => {
     joinTeam(teamId);
 
     const handleProposalCreated = (data) => {
-      if (data.teamId.toString() === teamId) {
-        const p = data.proposal;
-        const mapped = {
-          id: p._id || p.id,
-          teamId: p.teamId,
-          title: p.title,
-          description: p.description,
-          status: p.status || 'open',
-          createdAt: p.createdAt,
-          responses: { agree: 0, neutral: 0, disagree: 0 },
-          totalVotes: 0,
-        };
-        setProposals((prev) => [mapped, ...prev]);
-      }
+      if (data.teamId.toString() !== teamId) return;
+      const mapped = mapProposal(data.proposal);
+      // The creator is in this room too and has already inserted it locally, so
+      // insertion is idempotent on proposal id.
+      setProposals((prev) =>
+        prev.some((p) => p.id === mapped.id) ? prev : [mapped, ...prev]
+      );
     };
 
     const handleProposalDeleted = (data) => {
@@ -122,20 +114,14 @@ const TeamBoard = () => {
         options,
       };
 
-      const created = await proposalApi.create(teamId, payload);
-      const mapped = {
-        id: created._id || created.id,
-        teamId: created.teamId,
-        title: created.title,
-        description: created.description,
-        status: created.status || 'open',
-        createdAt: created.createdAt,
-        responses: { agree: 0, neutral: 0, disagree: 0 },
-        totalVotes: 0,
-      };
-      setProposals([...proposals, mapped]);
-    } catch {
-      throw new Error('Failed to create proposal');
+      const mapped = mapProposal(await proposalApi.create(teamId, payload));
+      // Prepended to match the socket path's ordering (newest first), and
+      // idempotent because the creator also receives proposal:created.
+      setProposals((prev) =>
+        prev.some((p) => p.id === mapped.id) ? prev : [mapped, ...prev]
+      );
+    } catch (err) {
+      throw new Error(err.message || 'Failed to create proposal');
     }
   };
 
