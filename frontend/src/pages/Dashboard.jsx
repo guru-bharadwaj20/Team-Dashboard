@@ -44,45 +44,29 @@ const Dashboard = () => {
     fetchTeams();
   }, []);
 
-  // Listen for real-time team updates
+  // Listen for real-time team updates.
+  // There is deliberately no team:created listener: teams are private to their
+  // members, so no one else can be told about a team's creation, and the server
+  // never emitted that event. The old handler was dead code that would also have
+  // thrown on `data.team`, a shape nothing ever sent.
   useEffect(() => {
     if (!socket || !connected) return;
-
-    const handleTeamCreated = (data) => {
-      const newTeam = {
-        id: data.team._id || data.team.id,
-        name: data.team.name,
-        description: data.team.description,
-        memberCount: Array.isArray(data.team.members) ? data.team.members.length : 1,
-        createdAt: data.team.createdAt || new Date().toISOString(),
-      };
-      setTeams((prev) => [newTeam, ...prev]);
-    };
 
     const handleTeamDeleted = (data) => {
       setTeams((prev) => prev.filter((t) => t.id !== data.teamId));
     };
 
-    socket.on(SOCKET_EVENTS.TEAM_CREATED, handleTeamCreated);
     socket.on(SOCKET_EVENTS.TEAM_DELETED, handleTeamDeleted);
-
-    return () => {
-      socket.off(SOCKET_EVENTS.TEAM_CREATED, handleTeamCreated);
-      socket.off(SOCKET_EVENTS.TEAM_DELETED, handleTeamDeleted);
-    };
+    return () => socket.off(SOCKET_EVENTS.TEAM_DELETED, handleTeamDeleted);
   }, [socket, connected]);
 
   const handleCreateTeam = async (formData) => {
     try {
       const created = await teamApi.create(formData);
-      const newTeam = {
-        id: created._id || created.id,
-        name: created.name,
-        description: created.description,
-        memberCount: Array.isArray(created.members) ? created.members.length : 1,
-        createdAt: created.createdAt || new Date().toISOString(),
-      };
-      setTeams([...teams, newTeam]);
+      // Mapped through the same normaliser as the fetch path. Hand-building the
+      // object here omitted `members`, which then threw in every consumer that
+      // read team.members.
+      setTeams((prev) => [...prev, mapTeam(created)]);
     } catch {
       setError('Failed to create team');
     }
