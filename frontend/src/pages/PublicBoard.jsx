@@ -71,7 +71,7 @@ const PublicBoard = () => {
           {team.description && (
             <p className="text-gray-400 text-lg">{team.description}</p>
           )}
-          <p className="text-gray-500 text-sm mt-2">{team.memberCount} member{team.memberCount !== 1 ? 's' : ''}</p>
+          <p className="text-gray-300 text-sm mt-2">{team.memberCount} member{team.memberCount !== 1 ? 's' : ''}</p>
         </div>
 
         {/* Proposals */}
@@ -104,8 +104,8 @@ const PublicBoard = () => {
                   {/* Vote Results */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Vote Results</h3>
-                      <span className="text-sm text-gray-500">{total} vote{total !== 1 ? 's' : ''}</span>
+                      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Vote Results</h3>
+                      <span className="text-sm text-gray-300">{total} vote{total !== 1 ? 's' : ''}</span>
                     </div>
                     <VoteBar label="Agree" count={p.responses.agree} total={total} colorClass="bg-green-500" textClass="text-green-700" />
                     <VoteBar label="Neutral" count={p.responses.neutral} total={total} colorClass="bg-yellow-400" textClass="text-yellow-600" />
@@ -115,7 +115,7 @@ const PublicBoard = () => {
                   {/* Options (if any) */}
                   {p.options && p.options.length > 0 && (
                     <div className="mt-5 pt-5 border-t border-gray-100">
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Proposed Options</h3>
+                      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Proposed Options</h3>
                       <ul className="space-y-1.5">
                         {p.options.map((opt, idx) => (
                           <li key={opt.id || idx} className="flex items-center gap-2 text-gray-700 text-sm">

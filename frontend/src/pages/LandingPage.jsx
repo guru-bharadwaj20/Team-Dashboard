@@ -92,7 +92,7 @@ const LandingPage = () => {
 
           {/* Mini preview */}
           <div className="mt-16 max-w-lg mx-auto bg-gray-800 bg-opacity-70 backdrop-blur border border-gray-700 rounded-2xl p-6 text-left shadow-2xl">
-            <div className="text-xs text-gray-500 uppercase tracking-widest mb-3 font-semibold">Live vote example</div>
+            <div className="text-xs text-gray-300 uppercase tracking-widest mb-3 font-semibold">Live vote example</div>
             <div className="font-semibold text-white mb-4">Should we migrate to microservices?</div>
             {[
               { label: 'Agree', pct: 62, color: 'bg-green-500', textColor: 'text-green-400' },
@@ -109,7 +109,7 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
-            <div className="text-xs text-gray-500 mt-3">13 votes · Updates live</div>
+            <div className="text-xs text-gray-300 mt-3">13 votes · Updates live</div>
           </div>
         </div>
       </section>

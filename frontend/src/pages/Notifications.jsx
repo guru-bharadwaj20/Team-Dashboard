@@ -182,7 +182,7 @@ const Notifications = () => {
                   <div className="text-gray-700 mb-2">
                     {notification.message}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-300">
                     {getTimeAgo(notification.createdAt)}
                   </div>
                 </div>

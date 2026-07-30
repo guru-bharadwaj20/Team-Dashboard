@@ -125,21 +125,21 @@ const Profile = () => {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-gray-900">{user.name}</div>
-                  <div className="text-gray-500 text-sm">{user.email}</div>
+                  <div className="text-gray-300 text-sm">{user.email}</div>
                 </div>
               </div>
 
               <div className="space-y-5">
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Full Name</div>
+                  <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-1">Full Name</div>
                   <div className="text-lg text-gray-900 font-medium">{user.name}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</div>
+                  <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-1">Email</div>
                   <div className="text-lg text-gray-900 font-medium">{user.email}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Member Since</div>
+                  <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-1">Member Since</div>
                   <div className="text-lg text-gray-900 font-medium">{memberSince}</div>
                 </div>
               </div>
