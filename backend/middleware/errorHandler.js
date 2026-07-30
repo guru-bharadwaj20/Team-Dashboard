@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger.js';
+
 const isProd = () => process.env.NODE_ENV === 'production';
 
 /** 404 for any /api route that matched no handler. */
@@ -32,10 +34,8 @@ export const errorHandler = (err, req, res, next) => {
 
   if (!status || status < 400) status = 500;
 
-  console.error(
-    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} → ${status}: ${err.message}`
-  );
-  if (!isProd()) console.error(err.stack);
+  logger.error(`${req.method} ${req.originalUrl} → ${status}: ${err.message}`);
+  if (!isProd()) logger.error(err.stack);
 
   // A 500 message can carry driver or filesystem detail, so it is replaced in
   // production; 4xx messages are written for users and are safe to send.

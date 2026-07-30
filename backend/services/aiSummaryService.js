@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 /**
  * AI Decision Summarization — Google Gemini
  *
@@ -27,7 +28,7 @@ const getClientAsync = async () => {
 
     return genAI;
   } catch (err) {
-    console.error("[AI] Failed to initialize Gemini:", err.message);
+    logger.error("[AI] Failed to initialize Gemini:", err.message);
     return null;
   }
 };
@@ -47,7 +48,7 @@ export const generateSummary = async (proposal) => {
   const client = await getClientAsync();
 
   if (!client) {
-    console.log(
+    logger.info(
       "[AI] GEMINI_API_KEY missing or Gemini unavailable — skipping summary generation."
     );
     return null;
@@ -152,7 +153,7 @@ Return ONLY valid JSON.
       generatedAt: new Date(),
     };
   } catch (err) {
-    console.error(
+    logger.error(
       "[AI] Summary generation failed:",
       err.message
     );

@@ -4,6 +4,7 @@ import { generateToken } from '../utils/generateToken.js';
 import { setAuthCookie, clearAuthCookie } from '../utils/authCookie.js';
 import { isValidEmail, normalizeEmail, validatePassword, validateText } from '../utils/validators.js';
 import { cascadeUserDelete, withTransaction } from '../services/cascadeService.js';
+import { logger } from '../utils/logger.js';
 
 /** The only user fields ever sent to a client. */
 const publicUser = (user) => ({
@@ -43,7 +44,7 @@ export const register = async (req, res) => {
 
     res.status(201).json({ user: publicUser(user) });
   } catch (error) {
-    console.error('Error during registration:', error);
+    logger.error('Error during registration:', error);
     res.status(500).json({ message: 'Failed to register' });
   }
 };
@@ -64,7 +65,7 @@ export const login = async (req, res) => {
     setAuthCookie(res, generateToken({ id: user._id }));
     res.json({ user: publicUser(user) });
   } catch (error) {
-    console.error('Error during login:', error);
+    logger.error('Error during login:', error);
     res.status(500).json({ message: 'Failed to login' });
   }
 };
@@ -117,7 +118,7 @@ export const updateProfile = async (req, res) => {
 
     res.json({ user: publicUser(updatedUser), message: 'Profile updated successfully' });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    logger.error('Error updating profile:', error);
     res.status(500).json({ message: 'Failed to update profile' });
   }
 };
@@ -154,7 +155,7 @@ export const changePassword = async (req, res) => {
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error('Error changing password:', error);
+    logger.error('Error changing password:', error);
     res.status(500).json({ message: 'Failed to change password' });
   }
 };
@@ -176,7 +177,7 @@ export const deleteAccount = async (req, res) => {
     clearAuthCookie(res);
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
-    console.error('Error deleting account:', error);
+    logger.error('Error deleting account:', error);
     res.status(500).json({ message: 'Failed to delete account' });
   }
 };

@@ -9,6 +9,7 @@ import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
 import { closeProposalIfExpired } from '../services/deadlineService.js';
 import { cascadeProposalDelete } from '../services/cascadeService.js';
+import { logger } from '../utils/logger.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ const notifyUser = async (io, userId, { type, title, message, link, relatedId, r
       emitToUser(io, userId.toString(), SOCKET_EVENTS.NOTIFICATION_NEW, n.toObject());
     }
   } catch (err) {
-    console.error('[Notification] Failed to create:', err.message);
+    logger.error('[Notification] Failed to create:', err.message);
   }
 };
 
@@ -123,7 +124,7 @@ export const createProposal = async (req, res) => {
 
     res.status(201).json(proposal);
   } catch (err) {
-    console.error('createProposal:', err);
+    logger.error('createProposal:', err);
     res.status(500).json({ message: 'Failed to create proposal' });
   }
 };
@@ -152,7 +153,7 @@ export const getProposalsByTeam = async (req, res) => {
       pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
     });
   } catch (err) {
-    console.error('getProposalsByTeam:', err);
+    logger.error('getProposalsByTeam:', err);
     res.status(500).json({ message: 'Failed to fetch proposals' });
   }
 };
@@ -342,7 +343,7 @@ export const voteOnProposal = async (req, res) => {
             if (io) emitToProposal(io, id, SOCKET_EVENTS.AI_SUMMARY_READY, { proposalId: id, summary });
           }
         } catch (e) {
-          console.error('[AI] Background summary error:', e.message);
+          logger.error('[AI] Background summary error:', e.message);
         }
       });
     }
@@ -362,7 +363,7 @@ export const voteOnProposal = async (req, res) => {
       status: proposal.status,
     });
   } catch (err) {
-    console.error('voteOnProposal:', err);
+    logger.error('voteOnProposal:', err);
     res.status(500).json({ message: 'Failed to record vote' });
   }
 };
@@ -415,7 +416,7 @@ export const addComment = async (req, res) => {
     // the whole thread (which raced the socket broadcast and produced duplicates).
     res.status(201).json({ message: 'Comment added', comment: newComment });
   } catch (err) {
-    console.error('addComment:', err);
+    logger.error('addComment:', err);
     res.status(500).json({ message: 'Failed to add comment' });
   }
 };
@@ -445,7 +446,7 @@ export const getComments = async (req, res) => {
       pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
     });
   } catch (err) {
-    console.error('getComments:', err);
+    logger.error('getComments:', err);
     res.status(500).json({ message: 'Failed to fetch comments' });
   }
 };
