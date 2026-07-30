@@ -5,6 +5,7 @@ import { proposalApi, exportApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToastContext } from '../context/ToastContext.jsx';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -117,6 +118,7 @@ const AISummaryPanel = ({ summary, loading: aiLoading }) => {
 
 const ExportButtons = ({ proposalId, proposalTitle }) => {
   const [exporting, setExporting] = useState(null);
+  const toast = useToastContext();
 
   const handleMarkdown = async () => {
     setExporting('md');
@@ -130,7 +132,7 @@ const ExportButtons = ({ proposalId, proposalTitle }) => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(`Export failed: ${err.message}`);
+      toast.error(`Export failed: ${err.message}`);
     } finally {
       setExporting(null);
     }
@@ -147,7 +149,7 @@ const ExportButtons = ({ proposalId, proposalTitle }) => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(`PDF export failed: ${err.message}`);
+      toast.error(`PDF export failed: ${err.message}`);
     } finally {
       setExporting(null);
     }
@@ -193,6 +195,7 @@ const ProposalDetails = () => {
   const [commentTotal, setCommentTotal] = useState(0);
   const { socket, connected, joinProposal, leaveProposal } = useSocket();
   const { user: currentUser } = useAuth();
+  const toast = useToastContext();
 
   const refreshComments = useCallback(async () => {
     const res = await proposalApi.getComments(proposalId);
@@ -317,7 +320,7 @@ const ProposalDetails = () => {
       setTotalVotes(res.totalVotes);
       setUserVote(res.userVote);
     } catch (err) {
-      alert(`Vote failed: ${err.message}`);
+      toast.error(`Vote failed: ${err.message}`);
     } finally {
       setVoting(false);
     }
@@ -349,7 +352,7 @@ const ProposalDetails = () => {
         await refreshComments();
       }
     } catch (err) {
-      alert(`Failed to add comment: ${err.message}`);
+      toast.error(`Failed to add comment: ${err.message}`);
     } finally {
       setPostingComment(false);
     }
@@ -359,9 +362,10 @@ const ProposalDetails = () => {
     if (!window.confirm('Delete this proposal?')) return;
     try {
       await proposalApi.delete(proposalId);
+      toast.success('Proposal deleted');
       navigate(-1);
     } catch (err) {
-      alert(`Failed to delete: ${err.message}`);
+      toast.error(`Failed to delete: ${err.message}`);
     }
   };
 

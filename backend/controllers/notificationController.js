@@ -51,22 +51,3 @@ export const clearAll = asyncHandler(async (req, res) => {
   res.json({ message: 'All notifications cleared' });
 });
 
-// Helper function to create a notification (used by other controllers)
-export const createNotification = async (userId, type, title, message, link = null, relatedId = null, relatedType = null) => {
-  try {
-    const notification = new Notification({
-      userId,
-      type,
-      title,
-      message,
-      link,
-      relatedId,
-      relatedType,
-    });
-    await notification.save();
-    return notification;
-  } catch (err) {
-    console.error('Failed to create notification:', err);
-    return null;
-  }
-};
