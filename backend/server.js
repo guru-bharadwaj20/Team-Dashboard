@@ -19,6 +19,7 @@ import exportRoutes from './routes/export.js';
 
 import { errorHandler } from './middleware/errorHandler.js';
 import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
+import { socketAuth } from './middleware/socketAuth.js';
 
 dotenv.config();
 
@@ -35,6 +36,9 @@ const io = new Server(httpServer, {
   pingTimeout: 60000,
   transports: ['websocket', 'polling'],
 });
+
+// Every socket connection must present a valid JWT before any event is handled.
+io.use(socketAuth);
 
 app.set('io', io);
 
@@ -67,7 +71,10 @@ app.use(errorHandler);
 
 // ── Socket.io Connection Handling ────────────────────────────────────────────
 io.on('connection', (socket) => {
-  // Join team room
+  // The personal notification room is derived from the verified JWT, never from a
+  // client-supplied id — otherwise any client could subscribe to another user's feed.
+  socket.join(`user:${socket.user.id}`);
+
   socket.on('join-team', (teamId) => {
     if (teamId) socket.join(`team:${teamId}`);
   });
@@ -75,17 +82,11 @@ io.on('connection', (socket) => {
     if (teamId) socket.leave(`team:${teamId}`);
   });
 
-  // Join proposal room
   socket.on('join-proposal', (proposalId) => {
     if (proposalId) socket.join(`proposal:${proposalId}`);
   });
   socket.on('leave-proposal', (proposalId) => {
     if (proposalId) socket.leave(`proposal:${proposalId}`);
-  });
-
-  // Join personal notification room (targeted delivery)
-  socket.on('join-user', (userId) => {
-    if (userId) socket.join(`user:${userId}`);
   });
 
   socket.on('disconnect', () => {});
