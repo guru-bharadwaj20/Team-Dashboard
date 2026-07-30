@@ -4,6 +4,16 @@ import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
 import { generateToken } from '../utils/generateToken.js';
+import { setAuthCookie, clearAuthCookie } from '../utils/authCookie.js';
+
+/** The only user fields ever sent to a client. */
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  createdAt: user.createdAt,
+});
 
 export const register = async (req, res) => {
   try {
@@ -21,12 +31,12 @@ export const register = async (req, res) => {
     const user = new User({ name, email, passwordHash });
     await user.save();
 
-    const token = generateToken({ id: user._id });
+    setAuthCookie(res, generateToken({ id: user._id }));
 
-    res.status(201).json({ user: { id: user._id, name: user.name, email: user.email }, token });
+    res.status(201).json({ user: publicUser(user) });
   } catch (error) {
     console.error('Error during registration:', error);
-    res.status(500).json({ message: 'Failed to register', error: error.message });
+    res.status(500).json({ message: 'Failed to register' });
   }
 };
 
@@ -41,13 +51,22 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
-    const token = generateToken({ id: user._id });
-    res.json({ user: { id: user._id, name: user.name, email: user.email }, token });
+    setAuthCookie(res, generateToken({ id: user._id }));
+    res.json({ user: publicUser(user) });
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(500).json({ message: 'Failed to login', error: error.message });
+    res.status(500).json({ message: 'Failed to login' });
   }
 };
+
+/** Clears the auth cookie. Required now that the token is not client-readable. */
+export const logout = (req, res) => {
+  clearAuthCookie(res);
+  res.json({ message: 'Logged out' });
+};
+
+/** Returns the authenticated user, letting the SPA verify its session on boot. */
+export const getMe = (req, res) => res.json({ user: publicUser(req.user) });
 
 // Update user profile
 export const updateProfile = async (req, res) => {
@@ -76,17 +95,10 @@ export const updateProfile = async (req, res) => {
       { new: true }
     ).select('-passwordHash');
 
-    res.json({ 
-      user: { 
-        id: updatedUser._id, 
-        name: updatedUser.name, 
-        email: updatedUser.email 
-      },
-      message: 'Profile updated successfully'
-    });
+    res.json({ user: publicUser(updatedUser), message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Failed to update profile', error: error.message });
+    res.status(500).json({ message: 'Failed to update profile' });
   }
 };
 
@@ -124,7 +136,7 @@ export const changePassword = async (req, res) => {
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Error changing password:', error);
-    res.status(500).json({ message: 'Failed to change password', error: error.message });
+    res.status(500).json({ message: 'Failed to change password' });
   }
 };
 
@@ -158,9 +170,10 @@ export const deleteAccount = async (req, res) => {
     // Delete the user account
     await User.findByIdAndDelete(userId);
 
+    clearAuthCookie(res);
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     console.error('Error deleting account:', error);
-    res.status(500).json({ message: 'Failed to delete account', error: error.message });
+    res.status(500).json({ message: 'Failed to delete account' });
   }
 };

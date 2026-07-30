@@ -9,8 +9,9 @@ const Navbar = () => {
   const authenticated = !!user;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    // Awaited: the server must clear the httpOnly cookie before we navigate away.
+    await logout();
     navigate('/');
     setMobileMenuOpen(false);
   };

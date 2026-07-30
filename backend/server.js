@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 
 // Routes
@@ -48,9 +49,15 @@ connectDB()
   .catch((err) => { console.error('✗ MongoDB failed:', err.message); process.exit(1); });
 
 // ── Security Middleware ───────────────────────────────────────────────────────
+// Render/Railway/Vercel put the app behind a reverse proxy. Without this, every
+// request presents the proxy's IP and the rate limiters key the entire user base
+// into a single bucket (and express-rate-limit v7 refuses to trust X-Forwarded-For).
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: CLIENT_URL, credentials: true }));
 app.use(express.json({ limit: '10kb' })); // Prevent large payload DoS
+app.use(cookieParser());
 app.use(apiLimiter); // Global rate limiting
 
 // ── API Routes ────────────────────────────────────────────────────────────────
