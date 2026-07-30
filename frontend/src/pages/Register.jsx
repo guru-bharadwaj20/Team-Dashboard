@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { isValidEmail, getPasswordError } from '../utils/helpers.js';
-import { authApi } from '../api/index.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +14,7 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,11 +60,13 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await authApi.registerOnly(formData.name, formData.email, formData.password);
-      setSuccess('Registration completed successfully! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
+      // Registration already establishes a session server-side, so land the user
+      // straight in the app. The previous flow discarded that session and made
+      // them sign in again after an artificial two-second delay.
+      await register(formData.name, formData.email, formData.password);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
-      const msg = err?.message || (err?.response?.data?.message) || 'Registration failed. Please try again.';
+      const msg = err?.message || 'Registration failed. Please try again.';
       setError(msg);
     } finally {
       setLoading(false);

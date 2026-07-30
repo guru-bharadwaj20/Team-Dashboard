@@ -3,6 +3,7 @@ import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
 import { emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
 import { logActivity } from '../services/activityService.js';
+import { validateText } from '../utils/validators.js';
 
 // Legacy alias used below
 const emitTeamUpdate = emitToTeam;
@@ -117,6 +118,50 @@ export const joinTeam = async (req, res) => {
   } catch (error) {
     console.error('Error joining team:', error);
     res.status(500).json({ message: 'Failed to join team', error: error.message });
+  }
+};
+
+/**
+ * Update a team's name or description. The client already exposed teamApi.update
+ * and the README documented PUT /api/teams/:id, but no such route existed and the
+ * call 404'd. Creator-only, matching delete.
+ */
+export const updateTeam = async (req, res) => {
+  try {
+    const team = req.team;
+    const { name, description } = req.body;
+
+    if (name === undefined && description === undefined) {
+      return res.status(400).json({ message: 'Provide a name or description to update' });
+    }
+
+    if (name !== undefined) {
+      const nameError = validateText(name, 'Team name', { min: 1, max: 100 });
+      if (nameError) return res.status(400).json({ message: nameError });
+      team.name = String(name).trim();
+    }
+
+    if (description !== undefined) {
+      const descError = validateText(description, 'Description', { min: 0, max: 1000 });
+      if (descError) return res.status(400).json({ message: descError });
+      team.description = String(description).trim();
+    }
+
+    await team.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      emitToTeam(io, team._id.toString(), SOCKET_EVENTS.TEAM_UPDATED, {
+        teamId: team._id.toString(),
+        name: team.name,
+        description: team.description,
+      });
+    }
+
+    res.json(team);
+  } catch (error) {
+    console.error('Error updating team:', error);
+    res.status(500).json({ message: 'Failed to update team' });
   }
 };
 
