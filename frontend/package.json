@@ -1,5 +1,5 @@
 {
-  "name": "team-decision-board",
+  "name": "team-decision-board-frontend",
   "private": true,
   "version": "2.0.0",
   "type": "module",
@@ -31,5 +31,10 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",
     "vite": "^7.2.2"
+  },
+  "description": "Team Decision Board web client \u2014 React, Vite, Tailwind",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18"
   }
 }
