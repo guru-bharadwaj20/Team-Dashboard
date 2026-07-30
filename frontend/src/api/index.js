@@ -89,12 +89,15 @@ export const teamApi = {
 
 // ─── Proposals ────────────────────────────────────────────────────────────────
 export const proposalApi = {
-  getByTeamId: (teamId) => api.get(`/teams/${teamId}/proposals`),
+  getByTeamId: (teamId, page = 1, limit = 50) =>
+    api.get(`/teams/${teamId}/proposals?page=${page}&limit=${limit}`),
   getById: (id) => api.get(`/proposals/${id}`),
   create: (teamId, data) => api.post(`/teams/${teamId}/proposals`, data),
   delete: (id) => api.delete(`/proposals/${id}`),
   vote: (id, vote) => api.post(`/proposals/${id}/vote`, { vote }),
-  getComments: (proposalId) => api.get(`/proposals/${proposalId}/comments`),
+  // Returns { comments, pagination } — comments moved to their own collection.
+  getComments: (proposalId, page = 1, limit = 50) =>
+    api.get(`/proposals/${proposalId}/comments?page=${page}&limit=${limit}`),
   addComment: (proposalId, text) => api.post(`/proposals/${proposalId}/comments`, { text }),
 };
 

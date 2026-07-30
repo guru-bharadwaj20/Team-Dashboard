@@ -67,15 +67,37 @@ export const getTeamById = async (req, res) => {
     const team = await Team.findById(req.team._id)
       .populate('creator', 'name email')
       .populate('members', 'name email');
-    const rawProposals = await Proposal.find({ teamId: team._id });
+    // Newest first, and capped: an unbounded proposal list was previously
+    // serialised in full on every team page load.
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
+    const [rawProposals, totalProposals] = await Promise.all([
+      Proposal.find({ teamId: team._id })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Proposal.countDocuments({ teamId: team._id }),
+    ]);
+
     const proposals = rawProposals.map((p) => {
       const responses = { agree: 0, disagree: 0, neutral: 0 };
       for (const v of p.votes) {
         if (responses[v.vote] !== undefined) responses[v.vote]++;
       }
-      return { ...p.toObject(), responses, totalVotes: p.votes.length };
+      return { ...p, responses, totalVotes: p.votes.length };
     });
-    res.json({ team, proposals });
+    res.json({
+      team,
+      proposals,
+      pagination: {
+        page,
+        limit,
+        total: totalProposals,
+        pages: Math.max(1, Math.ceil(totalProposals / limit)),
+      },
+    });
   } catch (error) {
     console.error('Error fetching team:', error);
     res.status(500).json({ message: 'Failed to fetch team', error: error.message });

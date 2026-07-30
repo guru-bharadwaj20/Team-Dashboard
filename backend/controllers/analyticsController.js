@@ -1,6 +1,7 @@
 import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Activity from '../models/Activity.js';
+import Comment from '../models/Comment.js';
 
 const TREND_DAYS = 14;
 
@@ -50,7 +51,7 @@ export const getDashboardAnalytics = async (req, res) => {
 
     const match = { teamId: { $in: teamIds } };
 
-    const [totalsRows, trendRows, voterRows, topTeamRows, topUserRows, recentActivity] =
+    const [totalsRows, trendRows, voterRows, topTeamRows, topUserRows, recentActivity, totalComments] =
       await Promise.all([
         Proposal.aggregate([
           { $match: match },
@@ -61,7 +62,6 @@ export const getDashboardAnalytics = async (req, res) => {
               resolvedProposals: { $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] } },
               openProposals: { $sum: { $cond: [{ $eq: ['$status', 'open'] }, 1, 0] } },
               totalVotes: { $sum: { $size: '$votes' } },
-              totalComments: { $sum: { $size: '$comments' } },
               agree: { $sum: { $size: filterVotes('agree') } },
               disagree: { $sum: { $size: filterVotes('disagree') } },
               neutral: { $sum: { $size: filterVotes('neutral') } },
@@ -104,6 +104,9 @@ export const getDashboardAnalytics = async (req, res) => {
         ]),
 
         Activity.find({ teamId: { $in: teamIds } }).sort({ createdAt: -1 }).limit(10).lean(),
+
+        // Comments now live in their own collection rather than an embedded array.
+        Comment.countDocuments({ teamId: { $in: teamIds } }),
       ]);
 
     const t = totalsRows[0] || {};
@@ -151,7 +154,7 @@ export const getDashboardAnalytics = async (req, res) => {
         totalProposals > 0 ? Math.round(((t.resolvedProposals || 0) / totalProposals) * 100) : 0,
       participationRate,
       averageVotes: totalProposals > 0 ? round1((t.totalVotes || 0) / totalProposals) : 0,
-      averageComments: totalProposals > 0 ? round1((t.totalComments || 0) / totalProposals) : 0,
+      averageComments: totalProposals > 0 ? round1(totalComments / totalProposals) : 0,
       mostActiveUser,
       mostActiveTeam,
       votingDistribution: { agree: t.agree || 0, disagree: t.disagree || 0, neutral: t.neutral || 0 },

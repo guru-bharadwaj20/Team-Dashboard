@@ -1,4 +1,5 @@
 import Proposal from '../models/Proposal.js';
+import Comment from '../models/Comment.js';
 import Team from '../models/Team.js';
 import Notification from '../models/Notification.js';
 import { emitToTeam, emitToProposal, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
@@ -129,9 +130,29 @@ export const createProposal = async (req, res) => {
 
 export const getProposalsByTeam = async (req, res) => {
   try {
-    const proposals = await Proposal.find({ teamId: req.params.teamId }).sort({ createdAt: -1 });
-    res.json(proposals.map((p) => ({ ...p.toObject(), responses: computeResponses(p.votes), totalVotes: p.votes.length })));
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const filter = { teamId: req.params.teamId };
+
+    const [proposals, total] = await Promise.all([
+      Proposal.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Proposal.countDocuments(filter),
+    ]);
+
+    res.json({
+      proposals: proposals.map((p) => ({
+        ...p,
+        responses: computeResponses(p.votes),
+        totalVotes: p.votes.length,
+      })),
+      pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
+    });
   } catch (err) {
+    console.error('getProposalsByTeam:', err);
     res.status(500).json({ message: 'Failed to fetch proposals' });
   }
 };
@@ -143,8 +164,7 @@ export const getProposalById = async (req, res) => {
     await closeProposalIfExpired(req.proposal, req.app.get('io'));
 
     const proposal = await Proposal.findById(req.params.id)
-      .populate('creator', 'name email')
-      .populate('comments.user', 'name');
+      .populate('creator', 'name email');
     if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
 
     const responses = computeResponses(proposal.votes);
@@ -309,7 +329,14 @@ export const voteOnProposal = async (req, res) => {
         try {
           const fresh = await Proposal.findById(id);
           if (!fresh || fresh.aiSummary) return; // already generated
-          const summary = await generateSummary(fresh.toObject());
+          // Comments are a separate collection now; the summariser still expects
+          // them on the proposal object it is handed.
+          const comments = await Comment.find({ proposalId: id })
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .select('text')
+            .lean();
+          const summary = await generateSummary({ ...fresh.toObject(), comments: comments.reverse() });
           if (summary) {
             await Proposal.findByIdAndUpdate(id, { aiSummary: summary });
             if (io) emitToProposal(io, id, SOCKET_EVENTS.AI_SUMMARY_READY, { proposalId: id, summary });
@@ -344,19 +371,29 @@ export const addComment = async (req, res) => {
   try {
     const { id } = req.params;
     const { text } = req.body;
-    if (!text?.trim()) return res.status(400).json({ message: 'Comment text is required' });
-    if (text.length > 2000) return res.status(400).json({ message: 'Comment too long (max 2000 chars)' });
 
-    const proposal = await Proposal.findById(id);
-    if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ message: 'Comment text is required' });
+    }
+    if (text.length > 2000) {
+      return res.status(400).json({ message: 'Comment too long (max 2000 chars)' });
+    }
 
-    proposal.comments.push({ user: req.user._id, text: text.trim() });
-    await proposal.save();
+    const proposal = req.proposal;
+
+    // One insert into its own collection, rather than pushing onto an embedded
+    // array and rewriting the whole proposal document.
+    const created = await Comment.create({
+      proposalId: proposal._id,
+      teamId: proposal.teamId,
+      user: req.user._id,
+      text: text.trim(),
+    });
+    await Proposal.updateOne({ _id: proposal._id }, { $inc: { commentCount: 1 } });
+
+    const newComment = await Comment.findById(created._id).populate('user', 'name').lean();
 
     const io = req.app.get('io');
-    const populated = await Proposal.findById(id).populate('comments.user', 'name');
-    const newComment = populated.comments[populated.comments.length - 1];
-
     if (io) emitToProposal(io, id, SOCKET_EVENTS.COMMENT_ADDED, { proposalId: id, comment: newComment });
 
     // Notify creator if someone else comments
@@ -383,12 +420,32 @@ export const addComment = async (req, res) => {
   }
 };
 
+/**
+ * Paginated comment thread. The whole array used to be returned unconditionally,
+ * which had no ceiling as a thread grew.
+ */
 export const getComments = async (req, res) => {
   try {
-    const proposal = await Proposal.findById(req.params.id).populate('comments.user', 'name email');
-    if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
-    res.json(proposal.comments);
-  } catch {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const proposalId = req.proposal._id;
+
+    const [comments, total] = await Promise.all([
+      Comment.find({ proposalId })
+        .sort({ createdAt: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('user', 'name email')
+        .lean(),
+      Comment.countDocuments({ proposalId }),
+    ]);
+
+    res.json({
+      comments,
+      pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) },
+    });
+  } catch (err) {
+    console.error('getComments:', err);
     res.status(500).json({ message: 'Failed to fetch comments' });
   }
 };
