@@ -62,12 +62,25 @@ export const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
+export const MIN_PASSWORD_LENGTH = 8;
+
 /**
- * Validate password strength
+ * Validate password strength. Mirrors the server policy in
+ * backend/utils/validators.js — keep the two in step.
+ * Returns null when acceptable, otherwise a message to show the user.
  */
-export const isValidPassword = (password) => {
-  return password && password.length >= 6;
+export const getPasswordError = (password) => {
+  if (!password) return 'Password is required';
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  return null;
 };
+
+export const isValidPassword = (password) => getPasswordError(password) === null;
 
 /**
  * Whether a session is likely active.
