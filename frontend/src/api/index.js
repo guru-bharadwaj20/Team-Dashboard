@@ -11,13 +11,31 @@ const api = axios.create({
   withCredentials: true,
 });
 
+/**
+ * Broadcast when the server rejects our session. AuthContext listens and clears
+ * local state, so an expired cookie logs the user out instead of leaving the app
+ * apparently signed in with every request silently failing.
+ */
+export const SESSION_EXPIRED_EVENT = 'auth:session-expired';
+
+// Endpoints where a 401 is an expected answer rather than an expired session.
+const SESSION_AGNOSTIC = ['/auth/login', '/auth/register', '/auth/logout'];
+
 // Unwrap response.data; surface errors cleanly
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+
+    if (status === 401 && !SESSION_AGNOSTIC.some((path) => url.includes(path))) {
+      removeCurrentUser();
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+    }
+
     const msg = error.response?.data?.message || error.message || 'Request failed';
     const enhanced = new Error(msg);
-    enhanced.status = error.response?.status;
+    enhanced.status = status;
     enhanced.response = error.response;
     return Promise.reject(enhanced);
   }

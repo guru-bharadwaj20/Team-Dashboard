@@ -4,7 +4,7 @@ import Loader from '../components/common/Loader.jsx';
 import { proposalApi, exportApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
-import { getCurrentUser } from '../utils/helpers.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -190,7 +190,7 @@ const ProposalDetails = () => {
   const [voting, setVoting] = useState(false);
   const [commentText, setCommentText] = useState('');
   const { socket, connected, joinProposal, leaveProposal } = useSocket();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useAuth();
 
   const refreshComments = useCallback(async () => {
     const commentsData = await proposalApi.getComments(proposalId);
