@@ -1,6 +1,5 @@
 import Proposal from '../models/Proposal.js';
 import Comment from '../models/Comment.js';
-import Team from '../models/Team.js';
 import Notification from '../models/Notification.js';
 import { emitToTeam, emitToProposal, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
 import { evaluateConsensus } from '../services/consensusService.js';

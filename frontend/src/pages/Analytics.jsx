@@ -42,9 +42,9 @@ const Analytics = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      setError('');
       const res = await analyticsApi.getDashboard();
       setData(res);
+      setError('');
     } catch (err) {
       setError(err.message || 'Failed to load analytics');
     } finally {
@@ -52,7 +52,12 @@ const Analytics = () => {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    // Fetch on mount. The rule cannot see that every setState here runs in a
+    // promise continuation, not synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData();
+  }, [fetchData]);
 
   if (loading) {
     return (

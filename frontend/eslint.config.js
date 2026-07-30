@@ -23,7 +23,13 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // argsIgnorePattern matches varsIgnorePattern: without eslint-plugin-react,
+      // ESLint cannot tell that `<Component />` in JSX uses the identifier, so a
+      // component passed as an argument reads as unused.
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]|^_' },
+      ],
     },
   },
 ])

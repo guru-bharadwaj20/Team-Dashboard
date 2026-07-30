@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { isValidEmail, getPasswordError } from '../utils/helpers.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 const Register = () => {
   const [formData, setFormData] = useState({

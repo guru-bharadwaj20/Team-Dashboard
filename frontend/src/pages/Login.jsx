@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { isValidEmail } from '../utils/helpers.js';
-import { authApi } from '../api/index.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -47,7 +46,7 @@ const Login = () => {
     setLoading(true);
     try {
       // Call backend login via AuthContext helper
-      const data = await login(formData.email, formData.password);
+      await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
       const msg = err?.message || (err?.response?.data?.message) || 'Login failed. Please try again.';

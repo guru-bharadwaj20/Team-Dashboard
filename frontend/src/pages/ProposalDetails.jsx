@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/common/Loader.jsx';
 import { proposalApi, exportApi } from '../api/index.js';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../hooks/useSocket.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useToastContext } from '../context/ToastContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
+import { useToastContext } from '../hooks/useToastContext.js';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 

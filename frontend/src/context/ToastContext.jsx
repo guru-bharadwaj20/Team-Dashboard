@@ -1,8 +1,7 @@
-import { createContext, useContext } from 'react';
+
 import { useToast } from '../hooks/useToast.js';
 import { ToastContainer } from '../components/common/Toast.jsx';
-
-const ToastContext = createContext(null);
+import { ToastContext } from './contexts.js';
 
 /**
  * Application-wide toasts.
@@ -20,10 +19,4 @@ export const ToastProvider = ({ children }) => {
       <ToastContainer toasts={toast.toasts} dismiss={toast.dismiss} />
     </ToastContext.Provider>
   );
-};
-
-export const useToastContext = () => {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToastContext must be used within ToastProvider');
-  return ctx;
 };

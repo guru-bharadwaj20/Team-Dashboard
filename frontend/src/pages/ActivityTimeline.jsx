@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { activityApi } from '../api/index.js';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../hooks/useSocket.js';
 import { SOCKET_EVENTS, ACTIVITY_LABELS, ACTIVITY_ICONS } from '../utils/constants.js';
 
 const TYPE_COLORS = {
@@ -98,7 +98,10 @@ const ActivityTimeline = () => {
       if (!isMounted.current) return;
       const items = data.activities || [];
       setActivities((prev) => append ? [...prev, ...items] : items);
-      setHasMore(data.hasMore || false);
+      // The endpoint returns { activities, pagination }; there is no `hasMore`
+      // field, so this was always false and "Load more" never appeared.
+      const { page: current = pageNum, pages = 1 } = data.pagination || {};
+      setHasMore(current < pages);
       setError('');
     } catch (err) {
       if (isMounted.current) setError(err.message || 'Failed to load activity');
@@ -110,7 +113,12 @@ const ActivityTimeline = () => {
     }
   }, []);
 
-  useEffect(() => { fetchPage(1, false); }, [fetchPage]);
+  useEffect(() => {
+    // Fetch on mount. The rule cannot see that every setState here runs in a
+    // promise continuation, not synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPage(1, false);
+  }, [fetchPage]);
 
   // Real-time: prepend new activities
   useEffect(() => {

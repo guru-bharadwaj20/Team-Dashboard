@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getCurrentUser, saveCurrentUser, removeCurrentUser } from '../utils/helpers.js';
 import { authApi, SESSION_EXPIRED_EVENT } from '../api/index.js';
-
-const AuthContext = createContext();
+import { AuthContext } from './contexts.js';
 
 /**
  * Auth state.
@@ -71,5 +70,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);
