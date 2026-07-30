@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { Link } from 'react-router-dom';
 import { analyticsApi } from '../api/index.js';
 import { StatSkeleton } from '../components/common/SkeletonLoader.jsx';
 import { ACTIVITY_ICONS, ACTIVITY_LABELS } from '../utils/constants.js';
@@ -86,6 +87,31 @@ const Analytics = () => {
     );
   }
 
+  // With no teams there is nothing to chart, and the page previously rendered a
+  // grid of zeroes above three blank chart frames.
+  if (!data || data.totalTeams === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto text-center bg-gray-800 bg-opacity-50 border border-gray-700 rounded-2xl p-12 mt-8">
+          <div className="text-5xl mb-4" aria-hidden="true">📊</div>
+          <h1 className="text-2xl font-bold text-white mb-2">No analytics yet</h1>
+          <p className="text-gray-300 mb-6">
+            Analytics cover the teams you belong to. Create or join a team, then post a
+            proposal to start collecting decision data.
+          </p>
+          <Link
+            to="/dashboard"
+            className="inline-block px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors"
+          >
+            Go to your teams
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const hasProposals = data.totalProposals > 0;
+
   const voteDist = [
     { name: 'Agree',    value: data.votingDistribution.agree,    fill: VOTE_COLORS.agree },
     { name: 'Neutral',  value: data.votingDistribution.neutral,  fill: VOTE_COLORS.neutral },
@@ -149,6 +175,11 @@ const Analytics = () => {
           {/* Proposal Trend */}
           <div className="lg:col-span-2 bg-gray-800 bg-opacity-70 border border-gray-700 rounded-2xl p-6">
             <SectionTitle>Proposal Creation — Last 14 Days</SectionTitle>
+            {!hasProposals ? (
+              <p className="text-gray-300 text-sm py-16 text-center">
+                No proposals yet — create one to start the trend.
+              </p>
+            ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={data.proposalTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -162,6 +193,7 @@ const Analytics = () => {
                 <Bar dataKey="count" name="Proposals" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Voting Distribution */}

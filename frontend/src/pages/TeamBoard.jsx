@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CreateProposalModal from '../components/modals/CreateProposalModal.jsx';
 import ProposalCard from '../components/cards/ProposalCard.jsx';
 import Loader from '../components/common/Loader.jsx';
 import { teamApi, proposalApi } from '../api/index.js';
 import { useSocket } from '../hooks/useSocket.js';
+import { useToastContext } from '../hooks/useToastContext.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 
 // Normalises a proposal document from the API or a socket payload.
@@ -27,6 +28,9 @@ const TeamBoard = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { socket, connected, joinTeam, leaveTeam } = useSocket();
+  const toast = useToastContext();
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     const fetchTeamAndProposals = async () => {
@@ -43,6 +47,7 @@ const TeamBoard = () => {
           description: foundTeam.description,
           memberCount: Array.isArray(foundTeam.members) ? foundTeam.members.length : (foundTeam.memberCount || 0),
           createdAt: foundTeam.createdAt,
+          shareId: foundTeam.shareId,
         });
 
         setProposals((data.proposals || []).map(mapProposal));
@@ -139,6 +144,40 @@ const TeamBoard = () => {
     }
   };
 
+  // #106 — there was no way to find anything on a board with more than a screenful.
+  const visibleProposals = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return proposals.filter((p) => {
+      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+      if (!matchesStatus) return false;
+      if (!q) return true;
+      return (
+        p.title?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [proposals, query, statusFilter]);
+
+  const copyShareLink = async () => {
+    const url = `${window.location.origin}/board/${team.shareId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Public board link copied');
+    } catch {
+      // Clipboard is unavailable over plain HTTP and in some browsers.
+      window.prompt('Copy this public board link:', url);
+    }
+  };
+
+  const copyJoinCode = async () => {
+    try {
+      await navigator.clipboard.writeText(team.shareId);
+      toast.success('Join code copied');
+    } catch {
+      window.prompt('Copy this join code:', team.shareId);
+    }
+  };
+
   if (loading) return <Loader />;
 
   if (!team) return null;
@@ -164,13 +203,63 @@ const TeamBoard = () => {
             </h1>
             <p className="mt-2 text-gray-400">{team.description}</p>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-          >
-            + Create Proposal
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {team.shareId && (
+              <>
+                <button
+                  type="button"
+                  onClick={copyJoinCode}
+                  className="px-4 py-3 text-sm bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold rounded-lg border border-gray-700 transition-colors"
+                  title="Members join with this code from their dashboard"
+                >
+                  Copy join code
+                </button>
+                <button
+                  type="button"
+                  onClick={copyShareLink}
+                  className="px-4 py-3 text-sm bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold rounded-lg border border-gray-700 transition-colors"
+                  title="Read-only public board — anyone with the link can view results"
+                >
+                  Copy public link
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            >
+              + Create Proposal
+            </button>
+          </div>
         </div>
+
+        {/* Search and filter */}
+        {proposals.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <label htmlFor="proposal-search" className="sr-only">Search proposals</label>
+            <input
+              id="proposal-search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search proposals…"
+              className="flex-1 px-4 py-2.5 text-sm bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <label htmlFor="proposal-status" className="sr-only">Filter by status</label>
+            <select
+              id="proposal-status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2.5 text-sm bg-gray-800 border border-gray-700 text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="all">All statuses</option>
+              <option value="open">Open</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        )}
 
         {/* Proposals List or Empty State */}
         {proposals.length === 0 ? (
@@ -180,9 +269,17 @@ const TeamBoard = () => {
               Create your first proposal to start discussions
             </p>
           </div>
+        ) : visibleProposals.length === 0 ? (
+          <div className="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl shadow-2xl p-12 border border-gray-700 text-center">
+            <p className="text-xl font-bold text-white mb-2">No matching proposals</p>
+            <p className="text-gray-300">Try a different search term or status filter.</p>
+          </div>
         ) : (
           <div className="space-y-6">
-            {proposals.map((proposal) => (
+            <p className="sr-only" role="status" aria-live="polite">
+              {visibleProposals.length} of {proposals.length} proposals shown
+            </p>
+            {visibleProposals.map((proposal) => (
               <ProposalCard key={proposal.id} proposal={proposal} />
             ))}
           </div>
