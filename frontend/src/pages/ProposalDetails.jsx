@@ -435,11 +435,11 @@ const ProposalDetails = () => {
           {/* Meta */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl mb-6">
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Created</div>
+              <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-1">Created</div>
               <div className="text-gray-900 font-medium">{new Date(proposal.createdAt).toLocaleDateString()}</div>
             </div>
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+              <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-1">
                 {isResolved ? 'Resolved' : 'Deadline'}
               </div>
               <div className="text-gray-900 font-medium">
@@ -455,7 +455,7 @@ const ProposalDetails = () => {
           {/* Options */}
           {proposal.options.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Proposed Options</h3>
+              <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Proposed Options</h3>
               <ul className="space-y-2">
                 {proposal.options.map((opt, idx) => (
                   <li key={opt._id || idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -473,7 +473,7 @@ const ProposalDetails = () => {
           <div className="border-t border-gray-100 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Cast Your Vote</h3>
-              <span className="text-sm text-gray-500">{totalVotes} vote{totalVotes !== 1 ? 's' : ''} total</span>
+              <span className="text-sm text-gray-300">{totalVotes} vote{totalVotes !== 1 ? 's' : ''} total</span>
             </div>
 
             {isOpen ? (
@@ -481,30 +481,36 @@ const ProposalDetails = () => {
                 {VOTE_OPTIONS.map(({ key, label, bg, border, text, light, icon }) => (
                   <button
                     key={key}
+                    type="button"
                     onClick={() => handleVote(key)}
                     disabled={voting}
-                    className={`flex-1 py-3 px-4 rounded-xl border-2 font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                    aria-pressed={userVote === key}
+                    className={`flex-1 py-3 px-4 rounded-xl border-2 font-semibold transition-all duration-200 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 ${
                       userVote === key
                         ? `${light} ${border} ${text} shadow-md scale-105`
                         : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300 hover:bg-gray-100'
                     } disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white ${userVote === key ? bg : 'bg-gray-300'}`}>
+                    <span
+                      aria-hidden="true"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white ${userVote === key ? bg : 'bg-gray-300'}`}
+                    >
                       {icon}
                     </span>
                     {label}
+                    {/* Not colour alone: the selected option also says so in text. */}
                     {userVote === key && <span className="text-xs ml-1">(your vote)</span>}
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg text-gray-500 text-sm text-center">
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg text-gray-300 text-sm text-center">
                 This proposal is {proposal.status} — voting is no longer available.
               </div>
             )}
 
             {/* Results */}
-            <div className="space-y-3">
+            <div className="space-y-3" role="status" aria-live="polite">
               <VoteBar label="Agree"    count={responses.agree}    total={totalVotes} colorClass="bg-green-500" />
               <VoteBar label="Neutral"  count={responses.neutral}  total={totalVotes} colorClass="bg-yellow-400" />
               <VoteBar label="Disagree" count={responses.disagree} total={totalVotes} colorClass="bg-red-500" />

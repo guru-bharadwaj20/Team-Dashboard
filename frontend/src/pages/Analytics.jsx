@@ -11,9 +11,9 @@ import { ACTIVITY_ICONS, ACTIVITY_LABELS } from '../utils/constants.js';
 
 const StatCard = ({ label, value, sub, color = 'text-white' }) => (
   <div className="bg-gray-800 bg-opacity-70 border border-gray-700 rounded-2xl p-6 hover:border-primary-600 transition-colors">
-    <div className="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-2">{label}</div>
+    <div className="text-xs text-gray-300 uppercase tracking-widest font-semibold mb-2">{label}</div>
     <div className={`text-4xl font-extrabold ${color} mb-1`}>{value}</div>
-    {sub && <div className="text-sm text-gray-500">{sub}</div>}
+    {sub && <div className="text-sm text-gray-300">{sub}</div>}
   </div>
 );
 
@@ -125,9 +125,9 @@ const Analytics = () => {
                   {data.mostActiveUser.name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Most Active Member</div>
+                  <div className="text-xs text-gray-300 uppercase tracking-wide mb-1">Most Active Member</div>
                   <div className="text-white font-bold text-lg">{data.mostActiveUser.name}</div>
-                  <div className="text-gray-500 text-sm">{data.mostActiveUser.count} actions</div>
+                  <div className="text-gray-300 text-sm">{data.mostActiveUser.count} actions</div>
                 </div>
               </div>
             )}
@@ -135,9 +135,9 @@ const Analytics = () => {
               <div className="bg-gray-800 bg-opacity-70 border border-gray-700 rounded-2xl p-6 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-green-700 flex items-center justify-center text-xl" aria-hidden="true">🏆</div>
                 <div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Most Active Team</div>
+                  <div className="text-xs text-gray-300 uppercase tracking-wide mb-1">Most Active Team</div>
                   <div className="text-white font-bold text-lg">{data.mostActiveTeam.name}</div>
-                  <div className="text-gray-500 text-sm">{data.mostActiveTeam.proposalCount} proposals</div>
+                  <div className="text-gray-300 text-sm">{data.mostActiveTeam.proposalCount} proposals</div>
                 </div>
               </div>
             )}
@@ -185,7 +185,7 @@ const Analytics = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[220px] flex items-center justify-center text-gray-500 text-sm">No votes yet</div>
+              <div className="h-[220px] flex items-center justify-center text-gray-300 text-sm">No votes yet</div>
             )}
           </div>
         </div>
@@ -194,7 +194,7 @@ const Analytics = () => {
         <div className="bg-gray-800 bg-opacity-70 border border-gray-700 rounded-2xl p-6">
           <SectionTitle>Recent Activity</SectionTitle>
           {data.recentActivity.length === 0 ? (
-            <p className="text-gray-500 text-sm">No activity yet.</p>
+            <p className="text-gray-300 text-sm">No activity yet.</p>
           ) : (
             <div className="space-y-3">
               {data.recentActivity.map((a) => (
