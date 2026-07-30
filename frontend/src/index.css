@@ -38,31 +38,15 @@
   .card {
     @apply bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100;
   }
-
-  .container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
 }
 
-.grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e5e7eb;
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
-}
-
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
+/*
+ * There is deliberately no bare `.grid`, `.card` or `.container` rule below this
+ * point. A plain `.grid { grid-template-columns: ... }` here outranked Tailwind's
+ * `grid-cols-*` utilities, so every responsive grid in the app silently collapsed
+ * to a fixed auto-fill layout. `.card` was also defined twice with conflicting
+ * values, and `.container` shadowed Tailwind's own container.
+ */
 
 /* Loading Spinner */
 .spinner {
@@ -89,6 +73,11 @@
   animation: slide-in 0.25s ease-out;
 }
 
+/* Used by the nested spinner in Loader to offset the inner ring. */
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
 .loader-container {
   display: flex;
   justify-content: center;
@@ -96,21 +85,15 @@
   min-height: 400px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .container {
-    padding: 1rem;
-  }
+/*
+ * Responsive overrides are handled by Tailwind's own breakpoint utilities
+ * (sm:, md:, lg:) at each call site. The media block that used to live here
+ * re-declared .container and .grid and fought those utilities.
+ */
 
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1.25rem;
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in,
+  .spinner {
+    animation: none;
   }
 }
