@@ -48,7 +48,7 @@ const PublicBoard = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
         <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-md">
-          <div className="text-5xl mb-4">🔍</div>
+          <div className="text-5xl mb-4" aria-hidden="true">🔍</div>
           <h2 className="text-xl font-bold text-red-800 mb-2">Board Not Found</h2>
           <p className="text-red-600 mb-6">{error}</p>
           <Link to="/" className="text-primary-600 hover:text-primary-700 font-semibold">← Back to Home</Link>

@@ -76,7 +76,7 @@ const Analytics = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4">📊</div>
+          <div className="text-5xl mb-4" aria-hidden="true">📊</div>
           <p className="text-red-400 text-lg mb-4">{error}</p>
           <button onClick={fetchData} className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
             Retry
@@ -133,7 +133,7 @@ const Analytics = () => {
             )}
             {data.mostActiveTeam && (
               <div className="bg-gray-800 bg-opacity-70 border border-gray-700 rounded-2xl p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-green-700 flex items-center justify-center text-xl">🏆</div>
+                <div className="w-12 h-12 rounded-full bg-green-700 flex items-center justify-center text-xl" aria-hidden="true">🏆</div>
                 <div>
                   <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Most Active Team</div>
                   <div className="text-white font-bold text-lg">{data.mostActiveTeam.name}</div>
@@ -200,7 +200,7 @@ const Analytics = () => {
               {data.recentActivity.map((a) => (
                 <div key={a.id} className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-sm">
-                    {ACTIVITY_ICONS[a.action] || '•'}
+                    <span aria-hidden="true">{ACTIVITY_ICONS[a.action] || '•'}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-white font-medium">{a.userName}</span>
