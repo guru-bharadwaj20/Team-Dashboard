@@ -31,12 +31,25 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+// CLIENT_URL accepts a comma-separated list, so preview and staging deployments
+// can be allowed alongside production. A single string still works unchanged.
+const ALLOWED_ORIGINS = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const PORT = process.env.PORT || 5000;
+
+/** Shared by Express CORS and the Socket.io handshake. */
+const corsOrigin = (origin, callback) => {
+  // Same-origin and non-browser callers (curl, health checks) send no Origin.
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+  return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+};
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
-  cors: { origin: CLIENT_URL, methods: ['GET', 'POST'], credentials: true },
+  cors: { origin: corsOrigin, methods: ['GET', 'POST'], credentials: true },
   pingInterval: 25000,
   pingTimeout: 60000,
   transports: ['websocket', 'polling'],
@@ -61,8 +74,25 @@ connectDB()
 // into a single bucket (and express-rate-limit v7 refuses to trust X-Forwarded-For).
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // This process serves JSON and PDF only — never HTML that loads scripts — so
+    // the policy can be maximally restrictive. Helmet's default CSP still allows
+    // 'self' scripts and styles, which this API has no use for.
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'none'"],
+      },
+    },
+    referrerPolicy: { policy: 'no-referrer' },
+  })
+);
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10kb' })); // Prevent large payload DoS
 app.use(cookieParser());
 app.use(sanitizeRequest); // Strip Mongo operators from all user input
