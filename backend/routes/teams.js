@@ -1,7 +1,7 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import { requireTeamMember, requireTeamCreator } from '../middleware/teamAuth.js';
-import { createTeam, getTeams, getTeamById, joinTeam, deleteTeam } from '../controllers/teamController.js';
+import { createTeam, getTeams, getTeamById, joinTeam, updateTeam, deleteTeam } from '../controllers/teamController.js';
 import { createProposal, getProposalsByTeam } from '../controllers/proposalController.js';
 
 const router = express.Router();
@@ -14,6 +14,7 @@ router.post('/join', protect, joinTeam);
 router
   .route('/:id')
   .get(protect, requireTeamMember, getTeamById)
+  .put(protect, requireTeamCreator, updateTeam)
   .delete(protect, requireTeamCreator, deleteTeam);
 
 // Nested: /api/teams/:teamId/proposals

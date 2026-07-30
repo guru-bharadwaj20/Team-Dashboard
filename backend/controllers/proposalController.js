@@ -5,6 +5,7 @@ import { emitToTeam, emitToProposal, emitToUser, SOCKET_EVENTS } from '../utils/
 import { evaluateConsensus } from '../services/consensusService.js';
 import { generateSummary } from '../services/aiSummaryService.js';
 import { logActivity } from '../services/activityService.js';
+import { validateText } from '../utils/validators.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,19 +35,63 @@ export const createProposal = async (req, res) => {
     const { teamId } = req.params;
     const { title, description, options, deadline } = req.body;
 
-    if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
-    if (!Array.isArray(options) || options.length < 2) return res.status(400).json({ message: 'At least 2 options are required' });
-    if (options.length > 5) return res.status(400).json({ message: 'Maximum 5 options allowed' });
+    const titleError = validateText(title, 'Title', { min: 1, max: 200 });
+    if (titleError) return res.status(400).json({ message: titleError });
 
-    const team = await Team.findById(teamId);
-    if (!team) return res.status(404).json({ message: 'Team not found' });
+    if (description !== undefined && description !== null && typeof description !== 'string') {
+      return res.status(400).json({ message: 'Description must be text' });
+    }
+    if (typeof description === 'string' && description.length > 5000) {
+      return res.status(400).json({ message: 'Description must be at most 5000 characters' });
+    }
+
+    if (!Array.isArray(options)) {
+      return res.status(400).json({ message: 'Options must be a list' });
+    }
+
+    // Each option must be a non-empty string. Previously this was
+    // String(o).trim(), which silently turned a submitted object into the literal
+    // "[object Object]" and accepted empty strings.
+    const cleanedOptions = [];
+    for (const option of options) {
+      if (typeof option !== 'string') {
+        return res.status(400).json({ message: 'Each option must be text' });
+      }
+      const text = option.trim();
+      if (!text) return res.status(400).json({ message: 'Options cannot be empty' });
+      if (text.length > 200) {
+        return res.status(400).json({ message: 'Each option must be at most 200 characters' });
+      }
+      cleanedOptions.push(text);
+    }
+
+    if (cleanedOptions.length < 2) {
+      return res.status(400).json({ message: 'At least 2 options are required' });
+    }
+    if (cleanedOptions.length > 5) {
+      return res.status(400).json({ message: 'Maximum 5 options allowed' });
+    }
+    if (new Set(cleanedOptions.map((o) => o.toLowerCase())).size !== cleanedOptions.length) {
+      return res.status(400).json({ message: 'Options must be unique' });
+    }
+
+    let deadlineDate;
+    if (deadline) {
+      deadlineDate = new Date(deadline);
+      if (Number.isNaN(deadlineDate.getTime())) {
+        return res.status(400).json({ message: 'Deadline is not a valid date' });
+      }
+    }
+
+    // Membership already enforced by requireTeamMember, which attaches req.team.
+    const team = req.team;
 
     const proposal = await Proposal.create({
       teamId,
       title: title.trim(),
       description: description?.trim(),
-      options: options.map((o) => ({ text: String(o).trim() })),
-      deadline: deadline ? new Date(deadline) : undefined,
+      options: cleanedOptions.map((text) => ({ text })),
+      deadline: deadlineDate,
       creator: req.user._id,
     });
 
