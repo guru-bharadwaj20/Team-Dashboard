@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { analyticsApi } from '../api/index.js';
 import { StatSkeleton } from '../components/common/SkeletonLoader.jsx';
+import { ACTIVITY_ICONS, ACTIVITY_LABELS } from '../utils/constants.js';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -21,30 +22,6 @@ const SectionTitle = ({ children }) => (
 );
 
 const VOTE_COLORS = { agree: '#22c55e', neutral: '#facc15', disagree: '#ef4444' };
-
-const ACTIVITY_ICONS = {
-  'team.created':       '🏗️',
-  'team.deleted':       '🗑️',
-  'team.member_joined': '👋',
-  'proposal.created':   '📝',
-  'proposal.deleted':   '🗑️',
-  'proposal.resolved':  '🎯',
-  'vote.cast':          '🗳️',
-  'vote.changed':       '🔄',
-  'comment.added':      '💬',
-};
-
-const ACTION_LABELS = {
-  'team.created':       'created team',
-  'team.deleted':       'deleted team',
-  'team.member_joined': 'joined team',
-  'proposal.created':   'created proposal',
-  'proposal.deleted':   'deleted proposal',
-  'proposal.resolved':  'resolved proposal',
-  'vote.cast':          'voted on',
-  'vote.changed':       'changed vote on',
-  'comment.added':      'commented on',
-};
 
 const fmtTime = (d) => {
   const diff = Date.now() - new Date(d).getTime();
@@ -222,7 +199,7 @@ const Analytics = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-white font-medium">{a.userName}</span>
-                    <span className="text-gray-400"> {ACTION_LABELS[a.action] || a.action} </span>
+                    <span className="text-gray-400"> {ACTIVITY_LABELS[a.action] || a.action} </span>
                     {a.targetTitle && (
                       <span className="text-primary-400 font-medium truncate">"{a.targetTitle}"</span>
                     )}

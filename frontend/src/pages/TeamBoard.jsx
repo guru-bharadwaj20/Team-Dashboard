@@ -79,6 +79,19 @@ const TeamBoard = () => {
       }
     };
 
+    // Emitted when the creator renames the team.
+    const handleTeamUpdated = (data) => {
+      if (data.teamId !== teamId) return;
+      setTeam((prev) => (prev ? { ...prev, name: data.name, description: data.description } : prev));
+    };
+
+    // Emitted when the deadline sweeper closes a proposal.
+    const handleStatusChanged = (data) => {
+      setProposals((prev) =>
+        prev.map((p) => (p.id === data.proposalId ? { ...p, status: data.status } : p))
+      );
+    };
+
     const handleMemberJoined = (data) => {
       if (data.teamId === teamId) {
         setTeam((prev) => ({
@@ -89,11 +102,15 @@ const TeamBoard = () => {
     };
 
     socket.on(SOCKET_EVENTS.PROPOSAL_CREATED, handleProposalCreated);
+    socket.on(SOCKET_EVENTS.TEAM_UPDATED, handleTeamUpdated);
+    socket.on(SOCKET_EVENTS.PROPOSAL_STATUS_CHANGED, handleStatusChanged);
     socket.on(SOCKET_EVENTS.PROPOSAL_DELETED, handleProposalDeleted);
     socket.on(SOCKET_EVENTS.TEAM_MEMBER_JOINED, handleMemberJoined);
 
     return () => {
       socket.off(SOCKET_EVENTS.PROPOSAL_CREATED, handleProposalCreated);
+      socket.off(SOCKET_EVENTS.TEAM_UPDATED, handleTeamUpdated);
+      socket.off(SOCKET_EVENTS.PROPOSAL_STATUS_CHANGED, handleStatusChanged);
       socket.off(SOCKET_EVENTS.PROPOSAL_DELETED, handleProposalDeleted);
       socket.off(SOCKET_EVENTS.TEAM_MEMBER_JOINED, handleMemberJoined);
       leaveTeam(teamId);

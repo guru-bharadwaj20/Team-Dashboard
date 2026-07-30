@@ -1,20 +1,12 @@
 import mongoose from 'mongoose';
+import { ACTIVITY_ACTIONS } from '../../shared/events.js';
 
 const activitySchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
     userName: { type: String, default: 'System' },
-    action: {
-      type: String,
-      required: true,
-      enum: [
-        'team.created', 'team.deleted', 'team.member_joined',
-        'proposal.created', 'proposal.deleted', 'proposal.resolved',
-        'vote.cast', 'vote.changed',
-        'comment.added',
-      ],
-      index: true,
-    },
+    // Enum comes from the shared contract so it cannot drift from the labels.
+    action: { type: String, required: true, enum: ACTIVITY_ACTIONS, index: true },
     targetId: { type: mongoose.Schema.Types.ObjectId },
     targetType: { type: String, enum: ['team', 'proposal', 'comment'] },
     targetTitle: { type: String, default: '' },
