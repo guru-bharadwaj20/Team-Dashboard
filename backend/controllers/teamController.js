@@ -32,7 +32,10 @@ export const createTeam = async (req, res) => {
 
 export const getTeams = async (req, res) => {
   try {
-    const teams = await Team.find().populate('creator', 'name email').populate('members', 'name email');
+    // Only teams the caller belongs to — team membership is the privacy boundary.
+    const teams = await Team.find({ members: req.user._id })
+      .populate('creator', 'name email')
+      .populate('members', 'name email');
     res.json(teams);
   } catch (error) {
     console.error('Error fetching teams:', error);
@@ -42,9 +45,10 @@ export const getTeams = async (req, res) => {
 
 export const getTeamById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const team = await Team.findById(id).populate('creator', 'name email').populate('members', 'name email');
-    if (!team) return res.status(404).json({ message: 'Team not found' });
+    // Membership already enforced by requireTeamMember; re-read with population.
+    const team = await Team.findById(req.team._id)
+      .populate('creator', 'name email')
+      .populate('members', 'name email');
     const rawProposals = await Proposal.find({ teamId: team._id });
     const proposals = rawProposals.map((p) => {
       const responses = { agree: 0, disagree: 0, neutral: 0 };
@@ -60,11 +64,19 @@ export const getTeamById = async (req, res) => {
   }
 };
 
+/**
+ * Join a team using its share code. Joining by raw team id is not offered: it would
+ * let anyone enumerate ObjectIds and insert themselves into arbitrary teams.
+ */
 export const joinTeam = async (req, res) => {
   try {
-    const { id } = req.params;
-    const team = await Team.findById(id);
-    if (!team) return res.status(404).json({ message: 'Team not found' });
+    const shareId = String(req.body?.shareId || '').trim();
+    if (!shareId) return res.status(400).json({ message: 'A team share code is required' });
+
+    const team = await Team.findOne({ shareId });
+    if (!team) return res.status(404).json({ message: 'No team found for that share code' });
+
+    const id = team._id.toString();
     if (!team.members.includes(req.user._id)) {
       team.members.push(req.user._id);
       await team.save();
@@ -117,16 +129,10 @@ export const joinTeam = async (req, res) => {
 
 export const deleteTeam = async (req, res) => {
   try {
-    const { id } = req.params;
-    const team = await Team.findById(id);
-    
-    if (!team) return res.status(404).json({ message: 'Team not found' });
-    
-    // Check if user is the creator or a member (you can add more specific authorization)
-    if (!team.creator.equals(req.user._id) && !team.members.includes(req.user._id)) {
-      return res.status(403).json({ message: 'Not authorized to delete this team' });
-    }
-    
+    // Creator-only; enforced by requireTeamCreator, which attaches req.team.
+    const team = req.team;
+    const id = team._id.toString();
+
     // Delete associated proposals
     await Proposal.deleteMany({ teamId: id });
     

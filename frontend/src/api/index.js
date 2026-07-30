@@ -59,7 +59,8 @@ export const teamApi = {
   getAll: () => api.get('/teams'),
   getById: (id) => api.get(`/teams/${id}`),
   create: (data) => api.post('/teams', data),
-  join: (id) => api.post(`/teams/${id}`),
+  // Joining requires the team's share code — team ids are not join tokens.
+  join: (shareId) => api.post('/teams/join', { shareId }),
   update: (id, data) => api.put(`/teams/${id}`, data),
   delete: (id) => api.delete(`/teams/${id}`),
 };
