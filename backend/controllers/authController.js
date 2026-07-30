@@ -1,11 +1,9 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
-import Team from '../models/Team.js';
-import Proposal from '../models/Proposal.js';
-import Notification from '../models/Notification.js';
 import { generateToken } from '../utils/generateToken.js';
 import { setAuthCookie, clearAuthCookie } from '../utils/authCookie.js';
 import { isValidEmail, normalizeEmail, validatePassword, validateText } from '../utils/validators.js';
+import { cascadeUserDelete, withTransaction } from '../services/cascadeService.js';
 
 /** The only user fields ever sent to a client. */
 const publicUser = (user) => ({
@@ -166,30 +164,14 @@ export const deleteAccount = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Delete user's notifications
-    await Notification.deleteMany({ userId });
-
-    // Find teams created by the user
-    const createdTeams = await Team.find({ creator: userId });
-    const teamIds = createdTeams.map(t => t._id);
-
-    // Delete proposals in those teams
-    await Proposal.deleteMany({ teamId: { $in: teamIds } });
-
-    // Delete teams created by the user
-    await Team.deleteMany({ creator: userId });
-
-    // Remove user from other teams
-    await Team.updateMany(
-      { members: userId },
-      { $pull: { members: userId } }
-    );
-
-    // Delete proposals created by the user in other teams
-    await Proposal.deleteMany({ creator: userId });
-
-    // Delete the user account
-    await User.findByIdAndDelete(userId);
+    // Seven unordered deletes with no transaction previously left the database
+    // inconsistent on any mid-way failure, and orphaned every notification and
+    // activity row that referenced the removed records. The cascade now runs as
+    // one unit, transactionally wherever the deployment supports it.
+    await withTransaction(async (session) => {
+      await cascadeUserDelete(userId, session);
+      await User.findByIdAndDelete(userId, session ? { session } : {});
+    });
 
     clearAuthCookie(res);
     res.json({ message: 'Account deleted successfully' });
