@@ -81,9 +81,11 @@ const Profile = () => {
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
+  // createdAt is now included in the user payload (see publicUser on the server);
+  // it used to be omitted, so this always rendered "Unknown".
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : 'Unknown';
+    : '—';
 
   if (!user) {
     return (
