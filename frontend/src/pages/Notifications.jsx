@@ -170,7 +170,7 @@ const Notifications = () => {
                     : notification.type === 'warning'
                     ? 'bg-yellow-100 text-yellow-600'
                     : 'bg-primary-100 text-primary-600'
-                }`}>
+                }`} aria-hidden="true">
                   {getIcon(notification.type)}
                 </div>
 
@@ -198,10 +198,12 @@ const Notifications = () => {
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={() => handleDelete(notification._id)}
+                    aria-label={`Delete notification: ${notification.title}`}
                     className="text-gray-400 hover:text-gray-600 transition-colors duration-200 text-2xl leading-none"
                   >
-                    ✕
+                    <span aria-hidden="true">✕</span>
                   </button>
                 </div>
               </div>

@@ -108,10 +108,12 @@ const CreateProposalModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Create New Proposal</h2>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close create proposal dialog"
             className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg p-2 transition-all duration-200"
           >
-            <span className="text-2xl">✕</span>
+            <span className="text-2xl" aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -184,7 +186,7 @@ const CreateProposalModal = ({ isOpen, onClose, onSubmit }) => {
                         aria-label={`Remove option ${index + 1}`}
                         className="px-3 py-2 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
                       >
-                        ✕
+                        <span aria-hidden="true">✕</span>
                       </button>
                     )}
                   </div>
