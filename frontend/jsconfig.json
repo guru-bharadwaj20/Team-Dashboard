@@ -1,0 +1,28 @@
+{
+  // @types/react and @types/react-dom were installed but did nothing: this is a
+  // plain-JS project with no tsconfig or jsconfig, so no editor was reading
+  // them. This file puts them to work — hover docs, autocomplete and prop
+  // checking in .jsx files — without introducing TypeScript.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    // Type *information* without type *errors*: add // @ts-check to a file to
+    // opt it in individually.
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@shared/*": ["../shared/*"]
+    }
+  },
+  "include": ["src/**/*", "../shared/**/*", "vite.config.js", "eslint.config.js"],
+  "exclude": ["node_modules", "dist"]
+}
