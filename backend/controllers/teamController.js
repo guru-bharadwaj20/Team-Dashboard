@@ -5,6 +5,7 @@ import { emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js'
 import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
 import { cascadeTeamDelete, withTransaction } from '../services/cascadeService.js';
+import { logger } from '../utils/logger.js';
 
 export const createTeam = async (req, res) => {
   try {
@@ -40,7 +41,7 @@ export const createTeam = async (req, res) => {
 
     res.status(201).json(team);
   } catch (error) {
-    console.error('Error creating team:', error);
+    logger.error('Error creating team:', error);
     res.status(500).json({ message: 'Failed to create team', error: error.message });
   }
 };
@@ -53,7 +54,7 @@ export const getTeams = async (req, res) => {
       .populate('members', 'name email');
     res.json(teams);
   } catch (error) {
-    console.error('Error fetching teams:', error);
+    logger.error('Error fetching teams:', error);
     res.status(500).json({ message: 'Failed to fetch teams', error: error.message });
   }
 };
@@ -96,7 +97,7 @@ export const getTeamById = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching team:', error);
+    logger.error('Error fetching team:', error);
     res.status(500).json({ message: 'Failed to fetch team', error: error.message });
   }
 };
@@ -153,7 +154,7 @@ export const joinTeam = async (req, res) => {
     }
     res.json(team);
   } catch (error) {
-    console.error('Error joining team:', error);
+    logger.error('Error joining team:', error);
     res.status(500).json({ message: 'Failed to join team', error: error.message });
   }
 };
@@ -197,7 +198,7 @@ export const updateTeam = async (req, res) => {
 
     res.json(team);
   } catch (error) {
-    console.error('Error updating team:', error);
+    logger.error('Error updating team:', error);
     res.status(500).json({ message: 'Failed to update team' });
   }
 };
@@ -228,7 +229,7 @@ export const deleteTeam = async (req, res) => {
     
     res.json({ message: 'Team and associated proposals deleted successfully' });
   } catch (error) {
-    console.error('Error deleting team:', error);
+    logger.error('Error deleting team:', error);
     res.status(500).json({ message: 'Failed to delete team', error: error.message });
   }
 };

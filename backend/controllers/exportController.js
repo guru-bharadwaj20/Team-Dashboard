@@ -1,5 +1,6 @@
 import Proposal from '../models/Proposal.js';
 import Comment from '../models/Comment.js';
+import { logger } from '../utils/logger.js';
 
 const pct = (n, total) => (total > 0 ? Math.round((n / total) * 100) : 0);
 const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A');
@@ -219,7 +220,7 @@ export const exportProposal = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="proposal-${proposal._id}.md"`);
     res.send(md);
   } catch (err) {
-    console.error('Export error:', err);
+    logger.error('Export error:', err);
     if (!res.headersSent) res.status(500).json({ message: 'Export failed' });
   }
 };

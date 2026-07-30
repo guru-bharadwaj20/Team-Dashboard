@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -23,6 +24,7 @@ import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
 import { socketAuth } from './middleware/socketAuth.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
 import { startDeadlineSweeper } from './services/deadlineService.js';
+import { logger } from './utils/logger.js';
 
 dotenv.config();
 
@@ -47,8 +49,11 @@ app.set('io', io);
 
 // ── Database ──────────────────────────────────────────────────────────────────
 connectDB()
-  .then(() => console.log('✓ MongoDB connected'))
-  .catch((err) => { console.error('✗ MongoDB failed:', err.message); process.exit(1); });
+  .then(() => logger.info('MongoDB connected'))
+  .catch((err) => {
+    logger.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
 
 // ── Security Middleware ───────────────────────────────────────────────────────
 // Render/Railway/Vercel put the app behind a reverse proxy. Without this, every
@@ -63,6 +68,22 @@ app.use(cookieParser());
 app.use(sanitizeRequest); // Strip Mongo operators from all user input
 app.use(apiLimiter); // Global rate limiting
 
+// ── Health ────────────────────────────────────────────────────────────────────
+// Reports the database state rather than a bare ok:true, which stayed green
+// while Mongo was down and made the check useless to a load balancer.
+const DB_STATES = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+
+app.get('/api/health', (req, res) => {
+  const state = mongoose.connection.readyState;
+  const dbUp = state === 1;
+  res.status(dbUp ? 200 : 503).json({
+    ok: dbUp,
+    db: DB_STATES[state] ?? 'unknown',
+    uptime: Math.round(process.uptime()),
+    ts: new Date().toISOString(),
+  });
+});
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/teams', teamRoutes);
@@ -73,8 +94,6 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/export', exportRoutes);
-
-app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 // ── Not Found ─────────────────────────────────────────────────────────────────
 // Unmatched /api routes previously fell through to Express's default HTML error
@@ -104,12 +123,62 @@ io.on('connection', (socket) => {
     if (proposalId) socket.leave(`proposal:${proposalId}`);
   });
 
-  socket.on('disconnect', () => {});
-  socket.on('error', (err) => console.error('[Socket]', err.message));
+  socket.on('error', (err) => logger.error('[Socket]', err.message));
 });
 
 // ── Background jobs ───────────────────────────────────────────────────────────
 const stopDeadlineSweeper = startDeadlineSweeper(io);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-httpServer.listen(PORT, () => console.log(`✓ Server running on port ${PORT}`));
+httpServer.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+
+// ── Shutdown ──────────────────────────────────────────────────────────────────
+// SIGTERM previously killed the process outright, dropping in-flight requests and
+// leaving Mongo connections and open sockets to time out on the other side.
+let shuttingDown = false;
+
+const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`${signal} received — shutting down`);
+
+  // Stop accepting work, then drain.
+  stopDeadlineSweeper();
+
+  const forceExit = setTimeout(() => {
+    logger.error('Shutdown timed out after 10s — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  try {
+    await io.close();
+    await new Promise((resolve, reject) =>
+      httpServer.close((err) => (err ? reject(err) : resolve()))
+    );
+    await mongoose.connection.close(false);
+    logger.info('Shutdown complete');
+    clearTimeout(forceExit);
+    process.exit(0);
+  } catch (err) {
+    logger.error('Error during shutdown:', err.message);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// A rejected promise or a thrown error outside a request previously died
+// silently (or killed the process with no log line at all).
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection:', reason instanceof Error ? reason.stack : reason);
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception:', err.stack || err.message);
+  // The process is in an undefined state after this; drain and exit.
+  shutdown('uncaughtException');
+});
+
+export { app, httpServer, io };

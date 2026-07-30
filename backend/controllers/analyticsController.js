@@ -2,6 +2,7 @@ import Team from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Activity from '../models/Activity.js';
 import Comment from '../models/Comment.js';
+import { logger } from '../utils/logger.js';
 
 const TREND_DAYS = 14;
 
@@ -171,7 +172,7 @@ export const getDashboardAnalytics = async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error('Analytics error:', err);
+    logger.error('Analytics error:', err);
     res.status(500).json({ message: 'Failed to fetch analytics' });
   }
 };

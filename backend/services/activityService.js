@@ -5,6 +5,7 @@
 
 import Activity from '../models/Activity.js';
 import { emitToTeam, SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Log an activity event.
@@ -31,9 +32,9 @@ export const logActivity = async (
         createdAt: activity.createdAt,
       });
     } else if (io && !teamId) {
-      console.warn('[Activity] Not emitted — no teamId on action:', action);
+      logger.warn('[Activity] Not emitted — no teamId on action:', action);
     }
   } catch (err) {
-    console.error('[Activity] Failed to log:', action, err.message);
+    logger.error('[Activity] Failed to log:', action, err.message);
   }
 };

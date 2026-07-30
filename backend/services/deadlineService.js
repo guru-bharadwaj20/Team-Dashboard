@@ -1,5 +1,6 @@
 import Proposal from '../models/Proposal.js';
 import { emitToProposal, emitToTeam, SOCKET_EVENTS } from '../utils/socketEvents.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Deadline enforcement.
@@ -66,7 +67,7 @@ export const sweepExpiredProposals = async (io) => {
     announce(io, { ...p.toObject(), closedAt: now });
   }
 
-  console.log(`[Deadline] Closed ${expired.length} expired proposal(s)`);
+  logger.info(`[Deadline] Closed ${expired.length} expired proposal(s)`);
   return expired.length;
 };
 
@@ -76,7 +77,7 @@ export const sweepExpiredProposals = async (io) => {
 export const startDeadlineSweeper = (io) => {
   const run = () =>
     sweepExpiredProposals(io).catch((err) =>
-      console.error('[Deadline] Sweep failed:', err.message)
+      logger.error('[Deadline] Sweep failed:', err.message)
     );
 
   const timer = setInterval(run, SWEEP_INTERVAL_MS);
