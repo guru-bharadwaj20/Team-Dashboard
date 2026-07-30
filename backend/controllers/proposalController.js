@@ -6,6 +6,7 @@ import { evaluateConsensus } from '../services/consensusService.js';
 import { generateSummary } from '../services/aiSummaryService.js';
 import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
+import { closeProposalIfExpired } from '../services/deadlineService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,10 @@ export const getProposalsByTeam = async (req, res) => {
 
 export const getProposalById = async (req, res) => {
   try {
+    // Lazily enforce the deadline so a stale 'open' status is corrected the
+    // moment anyone looks at the proposal, not only on the next sweep.
+    await closeProposalIfExpired(req.proposal, req.app.get('io'));
+
     const proposal = await Proposal.findById(req.params.id)
       .populate('creator', 'name email')
       .populate('comments.user', 'name');
@@ -159,34 +164,88 @@ export const voteOnProposal = async (req, res) => {
     if (!['agree', 'disagree', 'neutral'].includes(vote))
       return res.status(400).json({ message: 'vote must be agree, disagree, or neutral' });
 
-    const proposal = await Proposal.findById(id);
-    if (!proposal) return res.status(404).json({ message: 'Proposal not found' });
-    if (proposal.status !== 'open') return res.status(400).json({ message: 'This proposal is not open for voting' });
+    // requireProposalMember already loaded and authorized these.
+    const existing = req.proposal;
+    const team = req.team;
 
-    const existingIdx = proposal.votes.findIndex((v) => v.user.toString() === req.user._id.toString());
-    const isChange = existingIdx >= 0;
-    const previousVote = isChange ? proposal.votes[existingIdx].vote : null;
+    if (existing.status !== 'open') {
+      return res.status(400).json({ message: 'This proposal is not open for voting' });
+    }
 
-    if (isChange) {
-      proposal.votes[existingIdx].vote = vote;
-    } else {
-      proposal.votes.push({ user: req.user._id, vote });
+    if (existing.deadline && existing.deadline.getTime() < Date.now()) {
+      // Close it now rather than silently accepting a late vote.
+      await closeProposalIfExpired(existing, req.app.get('io'));
+      return res.status(400).json({ message: 'The deadline for this proposal has passed' });
+    }
+
+    const userId = req.user._id;
+    const previous = existing.votes.find((v) => v.user.equals(userId));
+    const isChange = !!previous;
+    const previousVote = previous?.vote ?? null;
+
+    if (isChange && previousVote === vote) {
+      const responses = computeResponses(existing.votes);
+      return res.json({
+        message: 'Vote unchanged',
+        responses,
+        totalVotes: existing.votes.length,
+        userVote: vote,
+        consensusReached: existing.consensusReached,
+        consensusPercentage: existing.consensusPercentage,
+        status: existing.status,
+      });
+    }
+
+    // Single atomic update, conditioned on whether this user has already voted.
+    // The previous read-modify-write via document.save() could lose one of two
+    // concurrent votes, because each writer serialised its own stale array.
+    const proposal = isChange
+      ? await Proposal.findOneAndUpdate(
+          { _id: id, status: 'open', 'votes.user': userId },
+          { $set: { 'votes.$.vote': vote } },
+          { new: true }
+        )
+      : await Proposal.findOneAndUpdate(
+          { _id: id, status: 'open', 'votes.user': { $ne: userId } },
+          { $push: { votes: { user: userId, vote, createdAt: new Date() } } },
+          { new: true }
+        );
+
+    if (!proposal) {
+      // Lost the race: the proposal closed, or the vote was recorded concurrently.
+      return res.status(409).json({ message: 'Vote could not be recorded, please retry' });
     }
 
     // ── Consensus check ──────────────────────────────────────────────
-    const team = await Team.findById(proposal.teamId);
-    const { reached, agreePercentage, participationRate } = evaluateConsensus(proposal.votes, team?.members?.length || 1);
+    const { reached, agreePercentage } = evaluateConsensus(
+      proposal.votes,
+      team?.members?.length || 0
+    );
 
     let resolved = false;
     if (reached && !proposal.consensusReached) {
-      proposal.status = 'resolved';
-      proposal.consensusReached = true;
-      proposal.consensusPercentage = Math.round(agreePercentage);
-      proposal.closedAt = new Date();
-      resolved = true;
+      // Conditioned on consensusReached being false so exactly one concurrent
+      // voter can flip the proposal to resolved and fire the notifications.
+      const claimed = await Proposal.findOneAndUpdate(
+        { _id: id, consensusReached: false },
+        {
+          $set: {
+            status: 'resolved',
+            consensusReached: true,
+            consensusPercentage: Math.round(agreePercentage),
+            closedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+      if (claimed) {
+        resolved = true;
+        proposal.status = claimed.status;
+        proposal.consensusReached = claimed.consensusReached;
+        proposal.consensusPercentage = claimed.consensusPercentage;
+        proposal.closedAt = claimed.closedAt;
+      }
     }
-
-    await proposal.save();
 
     const responses = computeResponses(proposal.votes);
     const io = req.app.get('io');

@@ -22,6 +22,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
 import { socketAuth } from './middleware/socketAuth.js';
 import { sanitizeRequest } from './middleware/sanitize.js';
+import { startDeadlineSweeper } from './services/deadlineService.js';
 
 dotenv.config();
 
@@ -101,6 +102,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
   socket.on('error', (err) => console.error('[Socket]', err.message));
 });
+
+// ── Background jobs ───────────────────────────────────────────────────────────
+const stopDeadlineSweeper = startDeadlineSweeper(io);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => console.log(`✓ Server running on port ${PORT}`));
