@@ -51,11 +51,13 @@ const CreateTeamModal = ({ isOpen, onClose, onSubmit }) => {
         {/* Header */}
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Create New Team</h2>
-          <button 
+          <button
+            type="button"
             onClick={onClose}
+            aria-label="Close create team dialog"
             className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg p-2 transition-all duration-200"
           >
-            <span className="text-2xl">✕</span>
+            <span className="text-2xl" aria-hidden="true">✕</span>
           </button>
         </div>
 

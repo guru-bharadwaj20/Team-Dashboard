@@ -15,19 +15,26 @@ const ICONS = {
 export const ToastContainer = ({ toasts, dismiss }) => {
   if (!toasts.length) return null;
   return (
-    <div className="fixed bottom-5 right-5 z-[100] space-y-2 max-w-sm w-full pointer-events-none">
+    <div
+      className="fixed bottom-5 right-5 z-[100] space-y-2 max-w-sm w-full pointer-events-none"
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}
           className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-2xl pointer-events-auto animate-slide-in ${TYPE_STYLES[t.type] || TYPE_STYLES.info}`}
         >
-          <span className="font-bold text-sm flex-shrink-0 mt-0.5">{ICONS[t.type] || 'ℹ'}</span>
+          <span className="font-bold text-sm flex-shrink-0 mt-0.5" aria-hidden="true">{ICONS[t.type] || 'ℹ'}</span>
           <span className="text-sm flex-1 leading-relaxed">{t.message}</span>
           <button
+            type="button"
             onClick={() => dismiss(t.id)}
+            aria-label="Dismiss notification"
             className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity text-sm ml-1"
           >
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </div>
       ))}
