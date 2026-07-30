@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 
+// Must cover every value in the Proposal status enum. `resolved` was missing, so
+// resolved proposals fell through to the yellow "pending" styling.
 const statusStyles = {
   open: 'bg-green-100 text-green-800 border-green-200',
   closed: 'bg-gray-100 text-gray-700 border-gray-200',
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  resolved: 'bg-indigo-100 text-indigo-800 border-indigo-200',
 };
 
 const ProposalCard = ({ proposal }) => {
