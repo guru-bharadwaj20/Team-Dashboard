@@ -5,7 +5,7 @@ import Loader from '../components/common/Loader.jsx';
 import { teamApi } from '../api/index.js';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
-import { getCurrentUser } from '../utils/helpers.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // Normalises a team document from the API into the shape this page renders.
 const mapTeam = (t) => ({
@@ -26,7 +26,7 @@ const Dashboard = () => {
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
   const { socket, connected } = useSocket();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const fetchTeams = async () => {

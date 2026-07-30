@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { getCurrentUser, saveCurrentUser, getPasswordError } from '../utils/helpers.js';
+import { saveCurrentUser, getPasswordError } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const stored = getCurrentUser();
+  // Single source of truth for the profile, rather than re-reading localStorage.
+  const { user, setUser, logout } = useAuth();
+  const stored = user;
 
-  const [user, setUser] = useState(stored);
   const [editMode, setEditMode] = useState(false);
   const [changePasswordMode, setChangePasswordMode] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');

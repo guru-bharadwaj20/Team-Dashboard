@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { getCurrentUser } from '../utils/helpers.js';
+import { useAuth } from './AuthContext.jsx';
 
 const SocketContext = createContext(null);
 
@@ -14,12 +14,17 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
+  // Keyed on the signed-in user, so signing in connects and signing out tears
+  // down. The previous version read the token once on mount with an empty
+  // dependency list, which meant real-time stayed dead for the whole first
+  // session after login until the page was reloaded.
   useEffect(() => {
-    if (!getCurrentUser()) return;
-
-    // Prevent duplicate connections
-    if (socketRef.current?.connected) return;
+    // No session: nothing to connect. State was already reset by the previous
+    // run's cleanup, so there is no setState to do here.
+    if (!userId) return;
 
     const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
 
@@ -34,10 +39,8 @@ export const SocketProvider = ({ children }) => {
       reconnectionAttempts: 10,
     });
 
-    s.on('connect', () => {
-      setConnected(true);
-      // The personal notification room is joined server-side from the verified JWT.
-    });
+    // The personal notification room is joined server-side from the verified JWT.
+    s.on('connect', () => setConnected(true));
 
     s.on('disconnect', (reason) => {
       setConnected(false);
@@ -47,14 +50,20 @@ export const SocketProvider = ({ children }) => {
     s.on('connect_error', () => setConnected(false));
     s.on('reconnect', () => setConnected(true));
 
-    setSocket(s);
     socketRef.current = s;
+    // Publishing the socket instance is the point of this effect: it is the handle
+    // to an external system that consumers subscribe to and must re-render for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSocket(s);
 
     return () => {
+      s.removeAllListeners();
       s.disconnect();
       socketRef.current = null;
+      setSocket(null);
+      setConnected(false);
     };
-  }, []);
+  }, [userId]);
 
   const joinTeam = useCallback((teamId) => {
     socketRef.current?.emit('join-team', teamId);
