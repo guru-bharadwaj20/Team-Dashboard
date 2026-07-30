@@ -65,12 +65,37 @@ const Notifications = () => {
     return date.toLocaleDateString();
   };
 
+  // Marks read in place. This previously called notificationApi.delete, so the
+  // "mark as read" control destroyed the notification and the `read` flag on the
+  // model was never set by anything.
   const handleMarkAsRead = async (id) => {
     try {
+      await notificationApi.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
       await notificationApi.delete(id);
-      setNotifications(notifications.filter((n) => n._id !== id));
+      setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch (err) {
       console.error('Failed to delete notification:', err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const unread = notifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    try {
+      await Promise.all(unread.map((n) => notificationApi.markAsRead(n._id)));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
     }
   };
 
@@ -85,6 +110,8 @@ const Notifications = () => {
     }
   };
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   if (loading) return <Loader />;
 
   return (
@@ -96,12 +123,22 @@ const Notifications = () => {
             Notifications
           </h1>
           {notifications.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="px-6 py-3 bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-            >
-              Clear All
-            </button>
+            <div className="flex gap-3">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="px-5 py-3 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-lg shadow-lg transition-all duration-200"
+                >
+                  Mark all read ({unreadCount})
+                </button>
+              )}
+              <button
+                onClick={handleClearAll}
+                className="px-6 py-3 bg-gradient-to-r from-danger-600 to-danger-700 hover:from-danger-700 hover:to-danger-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                Clear All
+              </button>
+            </div>
           )}
         </div>
 
@@ -115,7 +152,9 @@ const Notifications = () => {
             {notifications.map((notification) => (
               <div
                 key={notification._id}
-                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 p-6 flex items-start gap-4"
+                className={`rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 p-6 flex items-start gap-4 ${
+                  notification.read ? 'bg-gray-100' : 'bg-white border-l-4 border-primary-500'
+                }`}
               >
                 {/* Icon */}
                 <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
@@ -143,13 +182,23 @@ const Notifications = () => {
                   </div>
                 </div>
 
-                {/* Close Button */}
-                <button
-                  onClick={() => handleMarkAsRead(notification._id)}
-                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200 text-2xl"
-                >
-                  ✕
-                </button>
+                {/* Actions */}
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  {!notification.read && (
+                    <button
+                      onClick={() => handleMarkAsRead(notification._id)}
+                      className="px-3 py-1.5 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(notification._id)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200 text-2xl leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
