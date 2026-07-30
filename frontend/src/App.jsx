@@ -16,7 +16,6 @@ import ActivityTimeline from './pages/ActivityTimeline.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import ErrorPage from './pages/ErrorPage.jsx';
-import './App.css';
 
 function App() {
   return (

@@ -13,5 +13,7 @@ export const emitToProposal = (io, proposalId, event, data) =>
 export const emitToUser = (io, userId, event, data) =>
   io.to(`user:${userId}`).emit(event, data);
 
-export const emitBroadcast = (io, event, data) =>
-  io.emit(event, data);
+// There is deliberately no broadcast helper. Every event this app produces
+// belongs to a team, a proposal or a single user, and the two places that used
+// io.emit() were leaking one team's activity and one user's notifications to
+// every connected client.
