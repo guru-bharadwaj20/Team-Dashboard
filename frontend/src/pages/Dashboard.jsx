@@ -3,9 +3,9 @@ import CreateTeamModal from '../components/modals/CreateTeamModal.jsx';
 import TeamCard from '../components/cards/TeamCard.jsx';
 import Loader from '../components/common/Loader.jsx';
 import { teamApi } from '../api/index.js';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../hooks/useSocket.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 // Normalises a team document from the API into the shape this page renders.
 const mapTeam = (t) => ({

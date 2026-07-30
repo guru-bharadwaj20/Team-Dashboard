@@ -4,7 +4,7 @@ import CreateProposalModal from '../components/modals/CreateProposalModal.jsx';
 import ProposalCard from '../components/cards/ProposalCard.jsx';
 import Loader from '../components/common/Loader.jsx';
 import { teamApi, proposalApi } from '../api/index.js';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../hooks/useSocket.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 
 // Normalises a proposal document from the API or a socket payload.

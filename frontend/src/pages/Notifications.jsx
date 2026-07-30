@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { notificationApi } from '../api/index.js';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../hooks/useSocket.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 import Loader from '../components/common/Loader.jsx';
 
@@ -8,10 +8,6 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { socket, connected } = useSocket();
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   // Listen for new notifications via socket
   useEffect(() => {
@@ -28,7 +24,7 @@ const Notifications = () => {
     };
   }, [socket, connected]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await notificationApi.getAll();
       const data = res?.data ?? res;
@@ -38,7 +34,16 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Declared before use: the effect previously sat above this function and
+  // referenced it through the temporal dead zone.
+  useEffect(() => {
+    // Fetch on mount. The rule cannot see that every setState here runs in a
+    // promise continuation, not synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const getIcon = (type) => {
     const icons = {

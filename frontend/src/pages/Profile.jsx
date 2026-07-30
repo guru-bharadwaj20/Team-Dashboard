@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { saveCurrentUser, getPasswordError } from '../utils/helpers.js';
 import { authApi } from '../api/index.js';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 
 const Profile = () => {
   const navigate = useNavigate();

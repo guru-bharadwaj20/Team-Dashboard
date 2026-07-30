@@ -15,7 +15,6 @@
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Proposal from '../models/Proposal.js';
 import Comment from '../models/Comment.js';
 
 dotenv.config();

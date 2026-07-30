@@ -27,9 +27,12 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.8.0",
     "nodemon": "^2.0.22"
   },
-  "description": "Team Decision Board API \u2014 Express, MongoDB, Socket.io",
+  "description": "Team Decision Board API — Express, MongoDB, Socket.io",
   "license": "MIT",
   "engines": {
     "node": ">=18.18"
