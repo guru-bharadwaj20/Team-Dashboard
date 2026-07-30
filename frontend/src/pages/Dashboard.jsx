@@ -7,11 +7,24 @@ import { useSocket } from '../context/SocketContext.jsx';
 import { SOCKET_EVENTS } from '../utils/constants.js';
 import { getCurrentUser } from '../utils/helpers.js';
 
+// Normalises a team document from the API into the shape this page renders.
+const mapTeam = (t) => ({
+  id: t._id || t.id,
+  name: t.name,
+  description: t.description,
+  memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
+  createdAt: t.createdAt || new Date().toISOString(),
+  members: t.members || [],
+  creator: t.creator?._id || t.creator,
+});
+
 const Dashboard = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
   const { socket, connected } = useSocket();
   const currentUser = getCurrentUser();
 
@@ -19,17 +32,8 @@ const Dashboard = () => {
     const fetchTeams = async () => {
       try {
         const data = await teamApi.getAll();
-        const mapped = (Array.isArray(data) ? data : []).map((t) => ({
-          id: t._id || t.id,
-          name: t.name,
-          description: t.description,
-          memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
-          createdAt: t.createdAt || new Date().toISOString(),
-          members: t.members || [],
-          creator: t.creator?._id || t.creator,
-        }));
-        setTeams(mapped);
-      } catch (err) {
+        setTeams((Array.isArray(data) ? data : []).map(mapTeam));
+      } catch {
         setError('Failed to load teams');
         setTeams([]);
       } finally {
@@ -97,31 +101,22 @@ const Dashboard = () => {
     }
   };
 
-  const handleJoinTeam = async (teamId) => {
+  const handleJoinTeam = async (e) => {
+    e.preventDefault();
+    const code = joinCode.trim();
+    if (!code) return;
+    setJoining(true);
+    setError('');
     try {
-      await teamApi.join(teamId);
+      await teamApi.join(code);
+      setJoinCode('');
       const data = await teamApi.getAll();
-      const mapped = (Array.isArray(data) ? data : []).map((t) => ({
-        id: t._id || t.id,
-        name: t.name,
-        description: t.description,
-        memberCount: Array.isArray(t.members) ? t.members.length : (t.memberCount || 0),
-        createdAt: t.createdAt || new Date().toISOString(),
-        members: t.members || [],
-        creator: t.creator?._id || t.creator,
-      }));
-      setTeams(mapped);
+      setTeams((Array.isArray(data) ? data : []).map(mapTeam));
     } catch (err) {
-      setError('Failed to join team');
+      setError(err.message || 'Failed to join team');
+    } finally {
+      setJoining(false);
     }
-  };
-
-  const isUserMember = (team) => {
-    if (!currentUser) return false;
-    return team.members.some(m => {
-      const memberId = typeof m === 'object' ? m._id : m;
-      return memberId === currentUser.id;
-    });
   };
 
   if (loading) return <Loader />;
@@ -134,12 +129,30 @@ const Dashboard = () => {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
             Teams
           </h1>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl sm:transform sm:hover:scale-105 transition-all duration-200"
-          >
-            + Create Team
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <form onSubmit={handleJoinTeam} className="flex gap-2">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+                placeholder="Enter share code"
+                className="flex-1 sm:w-44 px-3 py-2.5 text-sm bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <button
+                type="submit"
+                disabled={joining || !joinCode.trim()}
+                className="px-4 py-2.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {joining ? 'Joining…' : 'Join'}
+              </button>
+            </form>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl sm:transform sm:hover:scale-105 transition-all duration-200"
+            >
+              + Create Team
+            </button>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -155,7 +168,7 @@ const Dashboard = () => {
             <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">👥</div>
             <p className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">No teams yet</p>
             <p className="text-sm sm:text-base text-gray-400">
-              Create your first team to get started
+              Create your first team, or join one with a share code
             </p>
           </div>
         ) : (
@@ -165,8 +178,6 @@ const Dashboard = () => {
                 key={team.id}
                 team={team}
                 onDelete={team.creator === currentUser?.id ? handleDeleteTeam : null}
-                onJoin={handleJoinTeam}
-                isMember={isUserMember(team)}
               />
             ))}
           </div>

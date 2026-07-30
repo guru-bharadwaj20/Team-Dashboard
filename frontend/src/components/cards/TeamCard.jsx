@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
-const TeamCard = ({ team, onDelete, onJoin, isMember }) => {
+// Only teams the viewer belongs to are ever listed, so there is no "join" state here.
+const TeamCard = ({ team, onDelete }) => {
   return (
     <div className="bg-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group">
       {/* Header with Gradient */}
@@ -33,21 +34,12 @@ const TeamCard = ({ team, onDelete, onJoin, isMember }) => {
 
       {/* Footer Actions */}
       <div className="p-4 sm:p-5 md:p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-2 sm:gap-3">
-        {isMember ? (
-          <Link 
-            to={`/team/${team.id}`}
-            className="flex-1 text-center px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 text-sm sm:text-base bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 sm:transform sm:hover:-translate-y-0.5 transition-all duration-200 shadow-md"
-          >
-            View Proposals
-          </Link>
-        ) : (
-          <button
-            onClick={() => onJoin(team.id)}
-            className="flex-1 px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 text-sm sm:text-base bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 sm:transform sm:hover:-translate-y-0.5 transition-all duration-200 shadow-md"
-          >
-            Join Team
-          </button>
-        )}
+        <Link
+          to={`/team/${team.id}`}
+          className="flex-1 text-center px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 text-sm sm:text-base bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 sm:transform sm:hover:-translate-y-0.5 transition-all duration-200 shadow-md"
+        >
+          View Proposals
+        </Link>
         {onDelete && (
           <button
             onClick={() => onDelete(team.id)}
