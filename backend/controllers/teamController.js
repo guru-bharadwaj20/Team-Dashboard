@@ -1,9 +1,10 @@
-import Team from '../models/Team.js';
+import Team, { generateShareId } from '../models/Team.js';
 import Proposal from '../models/Proposal.js';
 import Notification from '../models/Notification.js';
 import { emitToTeam, emitToUser, SOCKET_EVENTS } from '../utils/socketEvents.js';
 import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
+import { cascadeTeamDelete, withTransaction } from '../services/cascadeService.js';
 
 // Legacy alias used below
 const emitTeamUpdate = emitToTeam;
@@ -13,9 +14,26 @@ export const createTeam = async (req, res) => {
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ message: 'Name is required' });
 
-    const team = new Team({ name, description, creator: req.user._id, members: [req.user._id] });
-    await team.save();
-    
+    // A duplicate shareId used to surface as an unhandled 500. Retry on the
+    // unique-index violation instead, regenerating the code each time.
+    let team;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        team = new Team({
+          name, description,
+          creator: req.user._id,
+          members: [req.user._id],
+          shareId: generateShareId(),
+        });
+        await team.save();
+        break;
+      } catch (err) {
+        const duplicateShareId = err?.code === 11000 && err?.keyPattern?.shareId;
+        if (!duplicateShareId || attempt >= 4) throw err;
+      }
+    }
+
+
     const io = req.app.get('io');
     await logActivity(io, {
       userId: req.user._id, userName: req.user.name,
@@ -171,12 +189,14 @@ export const deleteTeam = async (req, res) => {
     const team = req.team;
     const id = team._id.toString();
 
-    // Delete associated proposals
-    await Proposal.deleteMany({ teamId: id });
-    
-    // Delete the team
-    await Team.findByIdAndDelete(id);
-    
+    // Removes the team's proposals and every notification/activity that pointed
+    // at them, which previously survived as dangling references.
+    await withTransaction(async (session) => {
+      await cascadeTeamDelete(id, session);
+      await Team.findByIdAndDelete(id, session ? { session } : {});
+    });
+
+
     // Emit to the team's own room only. A global broadcast told every connected
     // user about the deletion of a team they could not see.
     const io = req.app.get('io');

@@ -7,6 +7,7 @@ import { generateSummary } from '../services/aiSummaryService.js';
 import { logActivity } from '../services/activityService.js';
 import { validateText } from '../utils/validators.js';
 import { closeProposalIfExpired } from '../services/deadlineService.js';
+import { cascadeProposalDelete } from '../services/cascadeService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -402,6 +403,9 @@ export const deleteProposal = async (req, res) => {
 
     const teamId = proposal.teamId.toString();
     await proposal.deleteOne();
+    // Drop notifications and activity rows that referenced this proposal, which
+    // otherwise remained as links to a 404.
+    await cascadeProposalDelete(proposal._id);
 
     const io = req.app.get('io');
     if (io) emitToTeam(io, teamId, SOCKET_EVENTS.PROPOSAL_DELETED, { proposalId: id, teamId });
