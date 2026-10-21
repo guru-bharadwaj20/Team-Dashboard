@@ -1,607 +1,347 @@
 # Team Decision Board
 
-> An AI-powered collaborative decision intelligence platform where teams propose ideas, vote democratically, detect consensus automatically, and generate structured AI-backed decision summaries — all in real time.
+**Teams propose, vote and reach consensus in real time — and Gemini writes up the decision the moment it is made.**
 
-Built with the **MERN Stack**, **Socket.io**, and **Google Gemini AI**.
+[![CI](https://img.shields.io/badge/CI-Node_18_·_20_·_22-2ea44f?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](frontend/package.json)
+[![Express](https://img.shields.io/badge/Express-4_·_ESM-000000?logo=express&logoColor=white)](backend/package.json)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_7-47A248?logo=mongodb&logoColor=white)](backend/models)
+[![Socket.io](https://img.shields.io/badge/Socket.io-4-010101?logo=socketdotio&logoColor=white)](shared/events.js)
+[![Gemini](https://img.shields.io/badge/AI-Gemini_2.5_Flash-8E75B2?logo=googlegemini&logoColor=white)](backend/services/aiSummaryService.js)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Consensus Algorithm](#consensus-algorithm)
-- [AI Summary Flow](#ai-summary-flow)
-- [Socket.io Events](#socketio-events-reference)
-- [API Reference](#api-reference)
-- [Project Structure](#project-structure)
-- [Local Setup](#local-setup)
-- [Production Deployment](#production-deployment)
-- [Troubleshooting](#troubleshooting)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [Authors](#authors)
+Team discussions get fragmented across email and group chats, and nobody can
+find the decision — or the reasoning — a week later. Team Decision Board gives
+it a structure: a member posts a proposal, everyone votes Agree / Neutral /
+Disagree, progress bars move live on every screen, consensus is detected
+automatically, and an AI summary of the arguments and outcome is saved with the
+proposal. Results export to Markdown or PDF, and a public link shows them
+read-only.
 
 ---
 
-## Overview
+## Contents
 
-Traditional team discussions get fragmented across emails and group chats, making it hard to track decisions or understand the reasoning behind them.
-
-**Team Decision Board** replaces that with a structured, transparent workflow:
-
-1. A member posts a **proposal** with a description and options
-2. Every member votes **Agree / Neutral / Disagree** — changeable at any time
-3. Live progress bars update across all connected clients instantly via Socket.io
-4. When **70% agree** and **50% of members have voted**, consensus is detected automatically — the proposal is marked **Resolved**
-5. **Google Gemini** generates an executive summary with arguments, outcome, and next steps, persisted to the database
-6. Discussions happen in a real-time comment thread on the same page
-7. Results can be exported as **Markdown or PDF**
-8. A public share link lets stakeholders view results read-only — no account needed
-
----
-
-## Key Features
-
-### Authentication & User Management
-- JWT-based authentication with register, login, and logout
-- Profile management: update name, email, and password
-- Account deletion with cascading cleanup
-- All routes protected via middleware
-
-### Team Management
-- Create teams and join via invite
-- View team members and their activity
-- Public read-only board sharing via shareable link (no login required)
-
-### Proposals & Voting
-- Create proposals with title, description, and optional custom options
-- Vote **Agree / Neutral / Disagree** — votes can be changed until consensus is reached
-- Live vote counts and animated progress bars via Socket.io
-
-### Real-Time Collaboration (Socket.io)
-- Team rooms, proposal rooms, and personal user rooms (`user:{id}`)
-- Live updates for proposal creation, vote changes, comments, resolution, and notifications
-- No page refresh required at any point
-
-### Consensus Engine
-- Auto-resolves proposals when ≥ 70% agree and ≥ 50% of members have participated
-- On resolution: emits `proposal:resolved`, triggers AI summary, dispatches per-user notifications, and logs activity — all non-blocking
-
-### AI-Powered Decision Summaries (Google Gemini)
-- Triggered automatically via `setImmediate()` after consensus — never blocks the vote response
-- Generated only once per proposal; never regenerated
-- Structured output: Executive Summary, Supporting Arguments, Opposing Arguments, Final Outcome, Suggested Next Action
-- Pushed to all connected clients via `ai:summary-ready` socket event
-
-### Analytics Dashboard
-- Platform-wide stat cards: total teams, proposals, resolved count, acceptance rate, participation rate
-- 14-day proposal trend (bar chart) and all-time voting distribution (donut chart) via Recharts
-- Most active member and team highlight cards
-- Recent activity feed preview
-
-### Activity Timeline
-- Paginated audit log of all platform events (9 action types)
-- Live prepend via `ACTIVITY_CREATED` socket event with slide-in animation
-
-### Export
-- **Markdown** — full document with vote table, consensus banner, AI summary, and discussion thread
-- **PDF** — server-side via PDFKit
-
-### Security
-- Session held in an **httpOnly cookie** — unreadable from JavaScript, so an XSS
-  bug cannot exfiltrate it. `Secure` + `SameSite=None` in production.
-- **Socket.io handshakes are authenticated**; the personal notification room is
-  derived from the verified token, never from a client-supplied id.
-- **Team membership is the privacy boundary.** Every team-scoped route sits
-  behind `requireTeamMember`, `requireTeamCreator` or `requireProposalMember`.
-  Joining requires a share code, not a team id.
-- `helmet` with a `default-src 'none'` CSP, `frame-ancestors 'none'` and
-  `no-referrer`
-- Four-tier rate limiting: register (5 / hour), auth (20 / 15 min),
-  API (120 / min), heavy endpoints (10 / min), keyed on the real client IP via
-  `trust proxy`
-- `express-validator` chains on every write endpoint, plus a global sanitiser
-  that strips Mongo operators (`$gt`, dotted keys) from body, query and params
-- Password policy: 8+ characters with a letter and a digit, bcrypt cost 12
-- No stack traces or driver messages in production error responses
-- Request body capped at 10 KB
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Section | |
 |---|---|
-| Frontend | React 19, Vite 7, React Router DOM 7, Tailwind CSS 3 |
-| Charts | Recharts 2 |
-| State / Auth | React Context API + httpOnly cookie session |
-| Real-time | Socket.io 4 |
-| HTTP Client | Axios (centralized interceptor for auth + error enrichment) |
-| Backend | Node.js 18.18+, Express 4 (ES Modules) |
-| Database | MongoDB + Mongoose 7 |
-| Auth | JWT (jsonwebtoken) + bcryptjs |
-| AI | Google Gemini API (`gemini-2.5-flash`) via `@google/generative-ai` |
-| Security | Helmet (CSP), express-rate-limit, express-validator, operator sanitiser |
-| Export | Markdown (native), PDF (PDFKit) |
-| Tooling | npm workspaces, ESLint (both packages), `node --test` |
+| [What it does](#what-it-does) | The feature surface, by area |
+| [Architecture](#architecture) | SPA, API, sockets, database, Gemini |
+| [How a vote becomes a decision](#how-a-vote-becomes-a-decision) | Vote, consensus, summary, notify |
+| [Quick start](#quick-start) | One workspace install, one command |
+| [Project status](#project-status) | What ships, and what CI proves |
+| [Design decisions](#design-decisions) | Consensus rules, security, and why |
+| [Reference](#reference) | API routes and socket events |
+| [Repository layout](#repository-layout) | Where things live |
+| [Documentation](#documentation) | Which file answers which question |
+| [Team](#team) | Who built it |
+
+---
+
+## What it does
+
+| Area | Capabilities |
+|---|---|
+| **Accounts** | Register, login, logout, profile and password changes, account deletion with cascading cleanup |
+| **Teams** | Create teams, join with a share code, member lists, a public read-only board link |
+| **Proposals & voting** | Title, description and optional custom options; votes changeable until consensus; deadlines |
+| **Real time** | Team, proposal and personal rooms; live votes, comments, resolutions and notifications without a refresh |
+| **Consensus engine** | Auto-resolves at ≥ 70% agree with ≥ 50% of members voting and at least two votes |
+| **AI summaries** | Gemini writes an executive summary, supporting and opposing arguments, outcome and next action — once per proposal |
+| **Analytics** | Teams, proposals, acceptance and participation rates, a 14-day trend and a voting-distribution chart (Recharts) |
+| **Activity** | A paginated audit log of nine action types, prepended live |
+| **Export** | Markdown with vote table, consensus banner, summary and thread; server-side PDF via PDFKit |
+| **Security** | httpOnly cookie sessions, authenticated socket handshakes, membership-scoped routes, CSP, four-tier rate limits, input sanitising |
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────┐
-│                   BROWSER                    │
-│   React 19 + Vite 7 + Tailwind CSS 3        │
-│   Context: AuthContext · SocketContext       │
-│   Pages: Dashboard · TeamBoard · Proposal   │
-│           Analytics · ActivityTimeline      │
-└──────────────┬──────────────┬───────────────┘
-               │  HTTP/REST   │  WebSocket
-               │  (Axios)     │  (Socket.io client)
-┌──────────────▼──────────────▼───────────────┐
-│               EXPRESS SERVER                 │
-│   Helmet · Rate Limiter · JWT protect        │
-│   Routes: /auth /teams /proposals            │
-│            /analytics /activity /export      │
-│   Socket.io: team rooms · proposal rooms     │
-│               personal user:{id} rooms       │
-└───────────┬─────────────────┬───────────────┘
-            │                 │
-   ┌────────▼────────┐  ┌────▼──────────────┐
-   │    MongoDB       │  │  Google Gemini API │
-   │  Users · Teams  │  │  gemini-2.5-flash  │
-   │  Proposals      │  │  (fire-and-forget) │
-   │  Comments       │  └───────────────────┘
-   │  Activities     │
-   │  Notifications  │
-   └─────────────────┘
+```mermaid
+graph TB
+    subgraph browser["Browser — React 19 · Vite 7 · Tailwind 3"]
+        PAGES["Dashboard · TeamBoard · Proposal<br/>Analytics · ActivityTimeline"]
+        CTX["AuthContext · SocketContext"]
+    end
 
-shared/events.js holds the socket event names, activity tables and status
-labels that both halves import, so the contract cannot drift.
+    subgraph server["Express 4 API (ES modules)"]
+        MW["helmet · rate limits · protect<br/>validators · Mongo-operator sanitiser"]
+        ROUTES["/auth /teams /proposals<br/>/analytics /activity /export"]
+        SOCK["Socket.io<br/>team · proposal · user rooms"]
+        SVC["services<br/>consensus · deadline · cascade · AI summary"]
+    end
+
+    DB[("MongoDB<br/>Users · Teams · Proposals · Comments<br/>Activities · Notifications")]
+    GEM["Google Gemini<br/>gemini-2.5-flash"]
+    SHARED["shared/events.js<br/>socket names, activity + status tables"]
+
+    PAGES -->|"HTTP (Axios, cookie)"| MW --> ROUTES
+    CTX <-->|"WebSocket, authenticated handshake"| SOCK
+    ROUTES --> SVC
+    SVC <--> DB
+    SVC -->|"fire-and-forget"| GEM
+    SVC --> SOCK
+    SHARED -.-> PAGES
+    SHARED -.-> SOCK
 ```
+
+`shared/events.js` is imported by both halves, so the socket contract between
+the SPA and the server cannot drift.
 
 ---
 
-## Consensus Algorithm
+## How a vote becomes a decision
 
-The consensus engine is a **pure function** in `backend/services/consensusService.js`,
-covered by unit tests in `backend/tests/consensus.test.js`:
+```mermaid
+sequenceDiagram
+    participant U as Member
+    participant A as API
+    participant M as MongoDB
+    participant C as Consensus service
+    participant S as Socket.io
+    participant G as Gemini
+
+    U->>A: POST /api/proposals/:id/vote {agree}
+    A->>M: conditional findOneAndUpdate (no lost votes)
+    A->>C: evaluateConsensus(votes, memberCount)
+    alt ≥ 70% agree, ≥ 50% voted, ≥ 2 votes
+        A->>M: claim the transition where consensusReached = false
+        A->>S: proposal:resolved → team room and proposal room
+        A->>S: notification:new → every other member's room
+        A-->>U: 200 {consensusReached: true}
+        A->>G: setImmediate → structured summary prompt
+        G-->>A: JSON summary
+        A->>M: save aiSummary (never regenerated)
+        A->>S: ai:summary-ready → proposal room
+    else not yet
+        A->>S: vote:submitted / vote:changed
+        A-->>U: 200 {responses, totalVotes}
+    end
+```
+
+The vote response never waits on Gemini. Without `GEMINI_API_KEY` the summary
+step returns silently and everything else works.
+
+---
+
+## Quick start
+
+> Requirements: Node 18.18+, MongoDB (local or Atlas), and optionally a Gemini
+> API key.
+
+```bash
+# 1 — one npm workspace install covers shared, backend and frontend
+git clone https://github.com/guru-bharadwaj20/Team-Dashboard.git
+cd Team-Dashboard && npm install
+
+# 2 — environment: MONGO_URI and a JWT_SECRET of 32+ characters at minimum
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+
+# 3 — optional: collections, validators and indexes (idempotent, seeds nothing)
+mongosh "$MONGO_URI" backend/setup-database.mongodb.js
+
+# 4 — run: API on :5000, web on :5173
+npm run dev
+
+# 5 — what CI runs
+npm run lint && npm test && npm run build
+```
+
+Upgrading a database from before comments had their own collection? Run
+`npm run migrate:comments` (dry run by default, `-- --apply` to perform it).
+
+### Production
+
+| Component | Platform |
+|---|---|
+| Frontend | Vercel — set `VITE_API_URL` to the API origin plus `/api` |
+| Backend | Railway / Render — `NODE_ENV=production`, `CLIENT_URL`, `TRUST_PROXY_HOPS=1`, `JWT_SECRET`, `MONGO_URI` |
+| Database | MongoDB Atlas — account and team deletion then run in a transaction |
+
+The session is a cross-site cookie in production, which browsers accept only as
+`Secure` + `SameSite=None`. **Both** the SPA and the API must be on HTTPS, or
+sign-in will appear to succeed and then immediately fail.
+
+---
+
+## Project status
+
+Feature-complete for its scope. Delivered since the first release: role-based
+access control, a CI pipeline and a unit test suite.
+
+| Next | Notes |
+|---|---|
+| Email notifications and verification | Would close the account enumeration noted in [SECURITY.md](SECURITY.md) |
+| End-to-end and integration tests | The current suite covers pure units |
+| Semantic search, duplicate-proposal detection | Vector embeddings |
+| Finer-grained roles, Docker/Kubernetes, a mobile app | — |
+
+### What CI proves on every push
+
+| Job | Proves |
+|---|---|
+| Lint, test and build (Node 18, 20, 22) | ESLint is clean in both packages, the `node --test` suite passes, and the SPA builds |
+| Check for committed secrets | No `.env` file is tracked |
+
+The tests cover the units where a regression would otherwise be silent — the
+consensus rules, the validators and the Mongo-operator sanitiser — and encode
+real defects found during the audit, so they fail if any is reintroduced.
+
+---
+
+## Design decisions
+
+**Consensus is a pure function.** `evaluateConsensus` in
+`backend/services/consensusService.js` is unit-tested in isolation:
 
 ```js
 const AGREE_THRESHOLD         = 0.70;  // share of votes that must be "agree"
 const PARTICIPATION_THRESHOLD = 0.50;  // share of members that must have voted
 const MIN_VOTES               = 2;     // absolute floor on turnout
-
-export const evaluateConsensus = (votes, memberCount) => {
-  const totalVotes        = votes.length;
-  const agreeCount        = votes.filter((v) => v.vote === 'agree').length;
-  const agreePercentage   = (agreeCount / totalVotes) * 100;
-  const participationRate = memberCount > 0 ? (totalVotes / memberCount) * 100 : 0;
-
-  const reached =
-    memberCount >= MIN_VOTES &&
-    totalVotes  >= MIN_VOTES &&
-    agreePercentage   >= AGREE_THRESHOLD * 100 &&
-    participationRate >= PARTICIPATION_THRESHOLD * 100;
-
-  return { reached, agreePercentage, participationRate, totalVotes };
-};
 ```
 
-`MIN_VOTES` matters more than it looks: percentages alone are degenerate at small
-n. Without it a two-person team hit both thresholds on a **single** agree vote —
-100% agreement, 50% participation — and resolved the proposal before the second
-member had seen it.
+**Percentages are degenerate at small n.** Without `MIN_VOTES`, a two-person team
+hit both thresholds on a single agree vote — 100% agreement, 50% participation —
+and resolved before the second member had seen the proposal.
 
-When `reached === true`, the controller:
-1. Claims the transition with an update conditioned on `consensusReached: false`,
-   so exactly one of several concurrent voters fires the side effects
-2. Sets `status = 'resolved'`, `closedAt` and `consensusPercentage`
-3. Emits `proposal:resolved` to **both** the team room and the proposal room —
-   anyone viewing the proposal is only in the latter
-4. Creates targeted `notification:new` events for every member except the voter
-5. Triggers AI summary generation via `setImmediate()` (non-blocking)
-6. Logs a `proposal.resolved` activity entry
+**Exactly one voter fires the side effects.** Resolution is claimed with an
+update conditioned on `consensusReached: false`, and votes are a single
+conditional `findOneAndUpdate` rather than read-modify-write, so concurrent
+votes cannot lose one or resolve twice. A lost race returns 409.
 
-Votes are written with a single conditional `findOneAndUpdate` rather than a
-read-modify-write, so two simultaneous votes cannot lose one.
+**Deadlines close two ways.** Lazily, whenever anyone reads or votes on the
+proposal, and by a sweep every five minutes. Votes after the deadline are
+rejected.
 
-### Deadlines
+**Team membership is the privacy boundary.** Every team-scoped route sits behind
+`requireTeamMember`, `requireTeamCreator` or `requireProposalMember`. Joining
+needs a share code, never a raw team id — ObjectIds are enumerable.
 
-A proposal with a deadline is closed once it passes, both lazily (when anyone
-reads or votes on it) and by a sweep every five minutes
-(`backend/services/deadlineService.js`). Votes after the deadline are rejected.
+**The server picks your notification room.** There is no `join-user` event; the
+personal room is joined from the verified token, so nobody can subscribe to
+someone else's notifications.
+
+**Defence in depth on input.** httpOnly cookies an XSS bug cannot read;
+`helmet` with `default-src 'none'`; rate limits of 5/hour (register), 20/15 min
+(auth), 120/min (API) and 10/min (heavy endpoints) keyed on the real client IP;
+`express-validator` on every write plus a sanitiser that strips `$` and dotted
+keys; bcrypt cost 12; a 10 KB body cap; no stack traces in production.
 
 ---
 
-## AI Summary Flow
+## Reference
 
-```
-Vote response sent to client
-        │
-        └── setImmediate(() => generateAiSummary(proposal))
-                │
-                ├── GEMINI_API_KEY missing  →  return null (silent)
-                ├── aiSummary.generatedAt exists  →  return null (no regen)
-                ├── Call gemini-2.5-flash with structured prompt
-                ├── Parse JSON from response (handles markdown code fences)
-                ├── Save to proposal.aiSummary
-                └── Emit  ai:summary-ready  →  proposal room
-                          (frontend updates panel without page reload)
-```
+<details>
+<summary><b>API routes</b></summary>
 
----
-
-## Socket.io Events Reference
-
-Every connection is authenticated during the handshake from the auth cookie; an
-unauthenticated socket is rejected before any event is handled. There is no
-broadcast helper — every event goes to a team, proposal or user room.
-
-| Event | Direction | Room | Payload |
-|---|---|---|---|
-| `join-team` / `leave-team` | client → server | — | `teamId` |
-| `join-proposal` / `leave-proposal` | client → server | — | `proposalId` |
-| `team:updated` | server → client | `team:{id}` | `{ teamId, name, description }` |
-| `team:deleted` | server → client | `team:{id}` | `{ teamId, teamName }` |
-| `team:member-joined` | server → client | `team:{id}` | `{ teamId, member, memberCount }` |
-| `proposal:created` | server → client | `team:{id}` | `{ proposal, teamId, creator }` |
-| `proposal:updated` | server → client | `proposal:{id}` | `{ proposalId, responses, totalVotes, status }` |
-| `proposal:deleted` | server → client | `team:{id}` | `{ proposalId, teamId }` |
-| `proposal:resolved` | server → client | `team:{id}` **and** `proposal:{id}` | `{ proposalId, consensusPercentage, closedAt, title }` |
-| `proposal:status-changed` | server → client | `team:{id}` + `proposal:{id}` | `{ proposalId, status, closedAt }` — deadline close |
-| `vote:submitted` | server → client | `proposal:{id}` | `{ proposalId, responses, totalVotes, userId, vote }` |
-| `vote:changed` | server → client | `proposal:{id}` | as above, plus `previousVote` |
-| `comment:added` | server → client | `proposal:{id}` | `{ proposalId, comment }` |
-| `notification:new` | server → client | `user:{id}` | the persisted notification document |
-| `activity:created` | server → client | `team:{id}` | activity object |
-| `ai:summary-ready` | server → client | `proposal:{id}` | `{ proposalId, summary }` |
-
-There is deliberately no `join-user` event: the personal room is joined
-server-side from the verified token, so a client cannot subscribe to someone
-else's notifications. Event names live in `shared/events.js`, imported by both
-the server and the SPA.
-
----
-
-## API Reference
-
-All authenticated routes read the session from the `token` httpOnly cookie, with
-a `Bearer` header accepted as a fallback for non-browser clients. Team-scoped
-routes additionally require membership of the team in question — a 403 otherwise.
-
-### Auth
+Authenticated routes read the `token` httpOnly cookie, with a `Bearer` header as
+a fallback. Team-scoped routes also require membership — 403 otherwise.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | — | Register; sets the session cookie |
-| POST | `/api/auth/login` | — | Log in; sets the session cookie |
-| POST | `/api/auth/logout` | — | Clears the session cookie |
-| GET | `/api/auth/me` | ✓ | Current user — used to revalidate a session on boot |
-| PUT | `/api/auth/profile` | ✓ | Update name / email |
-| PUT | `/api/auth/password` | ✓ | Change password |
+| POST | `/api/auth/register` · `/login` · `/logout` | — | Session cookie in and out |
+| GET | `/api/auth/me` | ✓ | Revalidate a session on boot |
+| PUT | `/api/auth/profile` · `/password` | ✓ | Update name/email, change password |
 | DELETE | `/api/auth/account` | ✓ | Delete account and cascade |
-
-### Teams
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/teams` | ✓ | List **only the teams the caller belongs to** |
-| POST | `/api/teams` | ✓ | Create team |
-| POST | `/api/teams/join` | ✓ | Join via `{ shareId }` — the team's share code |
-| GET | `/api/teams/:id` | member | Team + paginated proposals |
-| PUT | `/api/teams/:id` | creator | Update name / description |
-| DELETE | `/api/teams/:id` | creator | Delete team and cascade |
-
-Joining by raw team id is not offered: ObjectIds are enumerable and would let
-anyone insert themselves into an arbitrary team.
-
-### Proposals
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/teams/:teamId/proposals` | member | Paginated list |
-| POST | `/api/teams/:teamId/proposals` | member | Create proposal |
-| GET | `/api/proposals/:id` | member | Proposal + tallies + your vote |
-| DELETE | `/api/proposals/:id` | member | Delete (creator only) |
-| POST | `/api/proposals/:id/vote` | member | Cast or change a vote |
-| GET | `/api/proposals/:id/comments` | member | Paginated thread |
-| POST | `/api/proposals/:id/comments` | member | Add a comment |
-
-#### Vote Endpoint
-
-```jsonc
-POST /api/proposals/:id/vote
-{ "vote": "agree" | "neutral" | "disagree" }
-
-// 200
-{
-  "message": "Vote recorded",
-  "responses": { "agree": 3, "neutral": 1, "disagree": 0 },
-  "totalVotes": 4,
-  "userVote": "agree",
-  "consensusReached": false,
-  "consensusPercentage": 0,
-  "status": "open"
-}
-```
-
-Returns `400` if the proposal is closed or past its deadline, and `409` if a
-concurrent write won the race (retry).
-
-### Analytics, Activity & Export
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/analytics` | ✓ | Metrics **for the caller's teams only** |
-| GET | `/api/activity?page=1&limit=20` | ✓ | Paginated activity feed |
-| GET | `/api/export/proposal/:id?format=markdown` | member | Export as Markdown |
-| GET | `/api/export/proposal/:id?format=pdf` | member | Export as PDF |
-
-### Notifications
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/notifications` | ✓ | List your notifications |
-| PATCH | `/api/notifications/:id` | ✓ | Mark one as read |
-| DELETE | `/api/notifications/:id` | ✓ | Delete one |
-| DELETE | `/api/notifications` | ✓ | Clear all |
-
-### Public & Misc
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
+| GET · POST | `/api/teams` | ✓ | Your teams only · create a team |
+| POST | `/api/teams/join` | ✓ | Join via `{ shareId }` |
+| GET · PUT · DELETE | `/api/teams/:id` | member · creator | Team with paginated proposals, update, delete and cascade |
+| GET · POST | `/api/teams/:teamId/proposals` | member | Paginated list · create |
+| GET · DELETE | `/api/proposals/:id` | member | Proposal with tallies and your vote · delete (creator) |
+| POST | `/api/proposals/:id/vote` | member | Cast or change a vote; 400 when closed, 409 on a lost race |
+| GET · POST | `/api/proposals/:id/comments` | member | Paginated thread · add a comment |
+| GET | `/api/analytics` | ✓ | Metrics for your teams only |
+| GET | `/api/activity?page=1&limit=20` | ✓ | Activity feed |
+| GET | `/api/export/proposal/:id?format=markdown\|pdf` | member | Export |
+| GET · PATCH · DELETE | `/api/notifications[/:id]` | ✓ | List, mark read, delete, clear |
 | GET | `/api/public/board/:shareId` | — | Read-only public board |
 | POST | `/api/contact` | — | Submit a contact message |
-| GET | `/api/health` | — | Health check; 503 when the database is down |
+| GET · PUT · DELETE | `/api/contact[/:id[/status]]` | admin | Contact administration (`role: "admin"`, set in MongoDB) |
+| GET | `/api/health` | — | 503 when the database is down |
 
-### Contact administration
+Every failure returns JSON — `message` with the first problem, and `errors[]` on
+validation failures.
 
-These serve and mutate third-party PII, so they require an authenticated user
-with `role: "admin"`. Promote an account by setting the field directly in
-MongoDB — there is no self-service path.
+</details>
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/contact` | admin | List all submissions |
-| GET | `/api/contact/:id` | admin | Read one |
-| PUT | `/api/contact/:id/status` | admin | Set `new` / `read` / `responded` |
-| DELETE | `/api/contact/:id` | admin | Delete one |
+<details>
+<summary><b>Socket.io events</b></summary>
 
-### Errors
+| Event | Direction | Room |
+|---|---|---|
+| `join-team` / `leave-team`, `join-proposal` / `leave-proposal` | client → server | — |
+| `team:updated`, `team:deleted`, `team:member-joined` | server → client | `team:{id}` |
+| `proposal:created`, `proposal:deleted` | server → client | `team:{id}` |
+| `proposal:updated`, `vote:submitted`, `vote:changed`, `comment:added`, `ai:summary-ready` | server → client | `proposal:{id}` |
+| `proposal:resolved`, `proposal:status-changed` | server → client | `team:{id}` **and** `proposal:{id}` |
+| `notification:new` | server → client | `user:{id}` |
+| `activity:created` | server → client | `team:{id}` |
 
-Every failure returns JSON, including unmatched routes:
+Every connection is authenticated at the handshake, and there is no broadcast
+helper — every event goes to a team, proposal or user room.
 
-```jsonc
-{ "message": "Options must be unique",
-  "errors": [ { "field": "options", "message": "Options must be unique" } ] }
-```
+</details>
 
-`message` always holds the first problem; `errors[]` appears on validation
-failures. Stack traces are included in development only.
-
----
-
-## Project Structure
-
-```
-Team-Dashboard/
-├── shared/
-│   └── events.js                  # socket names, activity + status tables
-│                                  # imported by BOTH packages
-├── backend/
-│   ├── config/db.js
-│   ├── controllers/               # auth, team, proposal, analytics,
-│   │                              # activity, notification, contact, export,
-│   │                              # public
-│   ├── middleware/
-│   │   ├── authMiddleware.js      # protect, adminOnly
-│   │   ├── teamAuth.js            # requireTeamMember / Creator / ProposalMember
-│   │   ├── socketAuth.js          # Socket.io handshake verification
-│   │   ├── validate.js            # express-validator chains, one per endpoint
-│   │   ├── sanitize.js            # strips Mongo operators from all input
-│   │   ├── asyncHandler.js
-│   │   ├── errorHandler.js        # + notFoundHandler
-│   │   └── rateLimiter.js
-│   ├── models/                    # User, Team, Proposal, Comment,
-│   │                              # Notification, Activity, Contact
-│   ├── routes/
-│   ├── services/
-│   │   ├── consensusService.js    # pure; unit tested
-│   │   ├── deadlineService.js     # lazy close + periodic sweep
-│   │   ├── cascadeService.js      # referential cleanup, transactional
-│   │   ├── activityService.js
-│   │   └── aiSummaryService.js
-│   ├── utils/                     # logger, validators, authCookie, socketEvents
-│   ├── scripts/migrate-comments.js
-│   ├── tests/                     # node --test
-│   └── server.js
-├── frontend/
-│   └── src/
-│       ├── api/index.js           # axios, cookie session, 401 handling
-│       ├── components/
-│       │   ├── cards/  common/    # Modal, ErrorBoundary, Toast, Loader…
-│       │   ├── layout/ modals/
-│       ├── context/               # providers + contexts.js
-│       ├── hooks/                 # useAuth, useSocket, useToastContext, useToast
-│       ├── pages/                 # lazy-loaded routes
-│       └── utils/
-├── .github/workflows/ci.yml
-├── CONTRIBUTING.md
-├── SECURITY.md
-└── package.json                   # npm workspace root
-```
-
----
-
-## Local Setup
-
-### Prerequisites
-
-- Node.js **18.18+**
-- MongoDB (local or [Atlas](https://www.mongodb.com/atlas))
-- Google Gemini API key *(optional — AI summaries are skipped gracefully if absent)*
-
-### 1. Clone and install
-
-This is a single **npm workspace**: one install at the root covers `shared`,
-`backend` and `frontend`.
-
-```bash
-git clone https://github.com/guru-bharadwaj20/Team-Dashboard.git
-cd Team-Dashboard
-npm install
-```
-
-### 2. Configure environment variables
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-```
-
-`backend/.env.example` documents every variable. At minimum set `MONGO_URI` and
-a `JWT_SECRET` of 32+ characters:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
-### 3. Prepare the database *(optional)*
-
-Creates collections, schema validators and indexes. Idempotent, and seeds nothing.
-
-```bash
-mongosh "$MONGO_URI" backend/setup-database.mongodb.js
-```
-
-Upgrading an existing database from before comments were extracted into their
-own collection? Run the migration — dry run by default:
-
-```bash
-npm run migrate:comments              # report only
-npm run migrate:comments -- --apply   # perform it
-```
-
-### 4. Run
-
-```bash
-npm run dev     # API on :5000, web on :5173
-```
-
-Or target one workspace:
-
-```bash
-npm run dev -w backend     # nodemon
-npm run dev -w frontend    # Vite HMR
-```
-
-### 5. Verify and build
-
-```bash
-npm run lint     # ESLint over backend and frontend
-npm test         # backend test suite
-npm run build    # SPA -> frontend/dist/
-```
-
-CI runs exactly these three across Node 18, 20 and 22.
-
----
-
-## Production Deployment
-
-| Component | Recommended Platform |
-|---|---|
-| Frontend | Vercel |
-| Backend | Railway / Render |
-| Database | MongoDB Atlas |
-
-Set on the backend:
-
-| Variable | Value |
-|---|---|
-| `NODE_ENV` | `production` — required; it is what makes the session cookie `Secure` |
-| `CLIENT_URL` | Your SPA origin. Comma-separate to allow previews. |
-| `TRUST_PROXY_HOPS` | `1` on Render/Railway/Fly, so rate limits key on the real client IP |
-| `JWT_SECRET` | 32+ random characters, **not** the value from any example |
-| `MONGO_URI` | Atlas connection string |
-
-Set `VITE_API_URL` on the frontend to the API origin plus `/api`.
-
-The session is a cross-site cookie in production, which browsers only accept as
-`Secure` + `SameSite=None`. **Both** the SPA and the API must be served over
-HTTPS, or sign-in will appear to succeed and then immediately fail.
-
-Account deletion and team deletion run inside a MongoDB transaction where the
-deployment supports one — Atlas and any replica set do. On a standalone `mongod`
-they fall back to sequential execution.
-
----
-
-## Troubleshooting
+<details>
+<summary><b>Troubleshooting</b></summary>
 
 | Symptom | Fix |
 |---|---|
-| Socket not connecting | `CLIENT_URL` must match the browser origin exactly. It accepts a comma-separated list. The handshake needs the auth cookie, so a cross-origin setup requires HTTPS in production (`SameSite=None` implies `Secure`). |
-| Logged out immediately after signing in | The session cookie was rejected. Check `CLIENT_URL`, and that the SPA and API are both on HTTPS in production. |
-| 401 on every request | `JWT_SECRET` changed, which invalidates all existing sessions. Sign in again. |
-| 403 "You are not a member of this team" | Working as intended — team data is private to members. Join with the team's share code. |
-| 404 on API calls | `VITE_API_URL` must match the backend port and include `/api`. |
-| Can't reach the contact admin routes | They require `role: "admin"`; set it on your user document in MongoDB. |
-| AI summary never appears | Add `GEMINI_API_KEY` and check the logs for the `[AI]` prefix. |
+| Socket not connecting | `CLIENT_URL` must match the browser origin exactly (comma-separated list allowed); cross-origin needs HTTPS in production |
+| Logged out right after signing in | The cookie was rejected — check `CLIENT_URL` and HTTPS on both sides |
+| 401 on every request | `JWT_SECRET` changed; sign in again |
+| 403 "You are not a member of this team" | Working as intended — join with the share code |
+| 404 on API calls | `VITE_API_URL` must match the backend and include `/api` |
+| AI summary never appears | Add `GEMINI_API_KEY` and check logs for `[AI]` |
 | PDF export returns 501 | `npm install pdfkit -w backend` |
-| Rate limit 429 errors | Register 5/hour, auth 20/15min, API 120/min, exports 10/min. Behind a proxy, set `TRUST_PROXY_HOPS`. |
-| `/api/health` returns 503 | The database is not connected — that is what the endpoint reports. |
-| Stale Tailwind styles | Delete `frontend/node_modules/.vite` and restart Vite. |
+| 429 errors | Behind a proxy, set `TRUST_PROXY_HOPS` |
+
+</details>
 
 ---
 
-## Future Improvements
+## Repository layout
 
-- Semantic search using vector embeddings
-- AI-powered duplicate proposal detection
-- Email notifications, and email verification (which would close the account
-  enumeration noted in [SECURITY.md](SECURITY.md))
-- Finer-grained roles beyond member / creator / admin
-- Docker and Kubernetes support
-- End-to-end and integration test coverage — the current suite covers pure units
-- Mobile application
-
-Delivered since the first release: role-based access control, a CI pipeline,
-and a unit test suite.
-
----
-
-## Testing
-
-```bash
-npm test
+```
+.
+├── shared/
+│   └── events.js            socket names, activity + status tables — imported by both packages
+├── backend/
+│   ├── controllers/         auth, team, proposal, analytics, activity, notification, contact, export, public
+│   ├── middleware/          protect, team auth, socket auth, validators, sanitiser, rate limits, errors
+│   ├── models/              User, Team, Proposal, Comment, Notification, Activity, Contact
+│   ├── services/            consensus (pure), deadline, cascade (transactional), activity, AI summary
+│   ├── scripts/             migrate-comments.js
+│   └── tests/               node --test
+├── frontend/src/
+│   ├── api/                 axios, cookie session, 401 handling
+│   ├── components/          cards, common, layout, modals
+│   ├── context/ · hooks/    auth, socket, toast
+│   └── pages/               lazy-loaded routes
+└── package.json             npm workspace root
 ```
 
-Runs `node --test` over `backend/tests/` — no framework. Coverage focuses on the
-pure units where a regression would otherwise be silent: the consensus rules,
-the validators, and the Mongo-operator sanitiser. The tests encode real defects
-found during the audit, so they fail if any is reintroduced.
+---
+
+## Documentation
+
+| Question | File |
+|---|---|
+| *How do I set up, and which conventions apply?* | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| *What is the security policy, and the known gaps?* | [SECURITY.md](SECURITY.md) |
+| *Which variables does the backend read?* | [backend/.env.example](backend/.env.example) |
+| *What are the consensus rules, exactly?* | [backend/services/consensusService.js](backend/services/consensusService.js) |
 
 ---
 
-## Contributing
+## Team
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the command table, and the
-conventions this codebase follows. Security policy and the credential-rotation
-notice are in [SECURITY.md](SECURITY.md).
-
----
-
-## Authors
-
-- **Guru**
-- **Harsh**
-- **Gautam**
+| Member | Focus |
+|---|---|
+| **Guru R Bharadwaj** | Backend, real-time layer, consensus and AI summaries, security hardening, front end |
+| **Harsh Pandya** | Contributor |
+| **Gautam** | Contributor |
 
 ---
 
