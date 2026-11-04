@@ -1,5 +1,13 @@
 # Team Decision Board
 
+<p align="center">
+  <a href="Team-Dashboard%20Demo.mp4">
+    <img src="docs/Team-Dashboard%20Demo%20thumbnail.png" alt="Watch the Team-Dashboard demo video" width="720">
+  </a>
+  <br>
+  <sub>▶ <b><a href="Team-Dashboard%20Demo.mp4">Watch the Team-Dashboard demo</a></b> (74 s): the first roadmap, the 30 July audit, 52 commits, CI run #8 (red on Node 22), and three users voting a proposal to consensus live on a fresh clone</sub>
+</p>
+
 **Teams propose, vote and reach consensus in real time — and Gemini writes up the decision the moment it is made.**
 
 [![CI](https://img.shields.io/badge/CI-Node_18_·_20_·_22-2ea44f?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
